@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>テスト結果 & SEO分析レポート - blog-auto</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 1.6rem; margin-bottom: 8px; }
+    h2 { font-size: 1.2rem; margin: 32px 0 12px; border-left: 4px solid #2563eb; padding-left: 12px; }
+    h3 { font-size: 1rem; margin: 20px 0 8px; }
+    .date { color: #888; font-size: 0.85rem; margin-bottom: 24px; }
+    .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { padding: 8px 12px; border-bottom: 1px solid #eee; text-align: left; }
+    th { background: #f8fafc; font-weight: 600; }
+    .pass { color: #16a34a; font-weight: 600; }
+    .fail { color: #dc2626; font-weight: 600; }
+    .warn { color: #d97706; font-weight: 600; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-yellow { background: #fef9c3; color: #854d0e; }
+    .score { font-size: 2.4rem; font-weight: 700; }
+    .score-row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .score-card { flex: 1; min-width: 140px; text-align: center; padding: 16px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .score-label { font-size: 0.8rem; color: #666; margin-top: 4px; }
+    .improvement { background: #eff6ff; border-left: 3px solid #2563eb; padding: 12px 16px; margin: 8px 0; border-radius: 0 4px 4px 0; font-size: 0.9rem; }
+    .before-after { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+    .arrow { color: #2563eb; font-weight: 700; }
+    ul { padding-left: 20px; margin: 8px 0; }
+    li { margin: 4px 0; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>テスト結果 & SEO分析レポート</h1>
+  <p class="date">生成日: 2026-04-24</p>
+
+  <!-- ===== テスト結果サマリー ===== -->
+  <h2>1. テスト結果</h2>
+
+  <div class="score-row">
+    <div class="score-card">
+      <div class="score pass">41/41</div>
+      <div class="score-label">テスト合格数</div>
+    </div>
+    <div class="score-card">
+      <div class="score" style="color:#2563eb">41.9%</div>
+      <div class="score-label">カバレッジ (Stmts)</div>
+    </div>
+    <div class="score-card">
+      <div class="score pass">4</div>
+      <div class="score-label">テストスイート</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>カバレッジ詳細</h3>
+    <table>
+      <thead><tr><th>ファイル</th><th>Stmts</th><th>Branch</th><th>Funcs</th><th>Lines</th></tr></thead>
+      <tbody>
+        <tr><td>app.controller.ts</td><td class="pass">100%</td><td>75%</td><td class="pass">100%</td><td class="pass">100%</td></tr>
+        <tr><td>app.service.ts</td><td class="pass">100%</td><td class="pass">100%</td><td class="pass">100%</td><td class="pass">100%</td></tr>
+        <tr><td>blog-generator.dto.ts</td><td class="pass">100%</td><td class="pass">100%</td><td class="pass">100%</td><td class="pass">100%</td></tr>
+        <tr><td>prompt-templates.ts</td><td class="pass">100%</td><td class="pass">100%</td><td class="pass">100%</td><td class="pass">100%</td></tr>
+        <tr><td>blog-generator.service.ts</td><td class="warn">48.9%</td><td class="warn">42.4%</td><td class="warn">55.6%</td><td class="warn">46.7%</td></tr>
+        <tr><td>wordpress.service.ts</td><td class="warn">69.7%</td><td class="warn">57.1%</td><td class="warn">55.6%</td><td class="warn">67.7%</td></tr>
+        <tr><td>image-generator.service.ts</td><td class="fail">22.0%</td><td class="fail">17.6%</td><td class="fail">0%</td><td class="fail">19.1%</td></tr>
+        <tr><td>blog-generator.controller.ts</td><td class="fail">0%</td><td class="fail">0%</td><td class="fail">0%</td><td class="fail">0%</td></tr>
+        <tr><td>wordpress.controller.ts</td><td class="fail">0%</td><td class="fail">0%</td><td class="fail">0%</td><td class="fail">0%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>テストスイート内訳</h3>
+    <table>
+      <thead><tr><th>スイート</th><th>テスト数</th><th>状態</th></tr></thead>
+      <tbody>
+        <tr><td>prompt-templates.spec.ts</td><td>24</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>blog-generator.service.spec.ts</td><td>12</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>wordpress.service.spec.ts</td><td>6</td><td><span class="badge badge-green">PASS</span></td></tr>
+        <tr><td>app.controller.spec.ts</td><td>1</td><td><span class="badge badge-green">PASS</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== SEO分析 ===== -->
+  <h2>2. SEO分析 (改修前)</h2>
+
+  <div class="score-row">
+    <div class="score-card">
+      <div class="score warn">52</div>
+      <div class="score-label">SEOスコア /100</div>
+    </div>
+    <div class="score-card">
+      <div class="score pass">8</div>
+      <div class="score-label">実装済み項目</div>
+    </div>
+    <div class="score-card">
+      <div class="score fail">7</div>
+      <div class="score-label">未実装項目</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>SEO実装チェックリスト</h3>
+    <table>
+      <thead><tr><th>項目</th><th>状態</th><th>備考</th></tr></thead>
+      <tbody>
+        <tr><td>タイトルへのキーワード配置指示</td><td><span class="badge badge-green">実装済</span></td><td>プロンプトで指示あり</td></tr>
+        <tr><td>H2/H3見出し階層構造</td><td><span class="badge badge-green">実装済</span></td><td>記事タイプ別に個数指定あり</td></tr>
+        <tr><td>画像ALTテキスト</td><td><span class="badge badge-green">実装済</span></td><td>sectionImages.altTextで生成</td></tr>
+        <tr><td>URLスラッグ(英語)</td><td><span class="badge badge-green">実装済</span></td><td>JSON出力に含む</td></tr>
+        <tr><td>カテゴリ・タグ自動付与</td><td><span class="badge badge-green">実装済</span></td><td>完全一致マッチング</td></tr>
+        <tr><td>excerpt(要約文)</td><td><span class="badge badge-green">実装済</span></td><td>100文字以内</td></tr>
+        <tr><td>アイキャッチ画像</td><td><span class="badge badge-green">実装済</span></td><td>featured_media設定</td></tr>
+        <tr><td>Swellテーマ装飾対応</td><td><span class="badge badge-green">実装済</span></td><td>ブロック構造指示あり</td></tr>
+        <tr class="warn"><td>meta description最適化指示</td><td><span class="badge badge-red">未実装</span></td><td>excerptとの差別化なし</td></tr>
+        <tr class="warn"><td>FAQ構造化データ (JSON-LD)</td><td><span class="badge badge-red">未実装</span></td><td>Q&A記事で効果大</td></tr>
+        <tr class="warn"><td>キーワード密度の指示</td><td><span class="badge badge-red">未実装</span></td><td>「含める」だけで具体的数値なし</td></tr>
+        <tr class="warn"><td>内部リンク挿入指示</td><td><span class="badge badge-red">未実装</span></td><td>関連記事へのリンクなし</td></tr>
+        <tr class="warn"><td>リード文のSEO最適化</td><td><span class="badge badge-red">未実装</span></td><td>冒頭120文字にキーワードを含む指示なし</td></tr>
+        <tr class="warn"><td>画像ファイル名のSEO対応</td><td><span class="badge badge-red">未実装</span></td><td>timestamp形式のみ</td></tr>
+        <tr class="warn"><td>まとめセクションのCTA</td><td><span class="badge badge-yellow">部分的</span></td><td>SEO記事のみ。他タイプなし</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== 改修計画 ===== -->
+  <h2>3. SEO改修内容</h2>
+
+  <div class="card">
+    <h3>A. プロンプト強化</h3>
+    <ul>
+      <li>冒頭120文字以内にメインキーワードを含む指示を追加</li>
+      <li>キーワード密度 1〜3% の目安を追加</li>
+      <li>meta description用の要約文(120文字)を出力項目に追加</li>
+      <li>Q&A記事にFAQ構造化データ(JSON-LD)の出力指示を追加</li>
+      <li>内部リンク挿入の推奨を追加</li>
+      <li>全記事タイプに「まとめ」+CTA指示を追加</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>B. サービスロジック改修</h3>
+    <ul>
+      <li>生成コンテンツにFAQ JSON-LDスクリプトを自動挿入</li>
+      <li>画像ファイル名にスラッグを含める形式に変更</li>
+      <li>excerptからmeta descriptionへの自動マッピング</li>
+    </ul>
+  </div>
+
+  <!-- ===== 改修結果 ===== -->
+  <h2>4. 改修結果 (After)</h2>
+
+  <div class="score-row">
+    <div class="score-card">
+      <div class="score pass">78</div>
+      <div class="score-label">SEOスコア /100 (推定)</div>
+    </div>
+    <div class="score-card">
+      <div class="score pass">14</div>
+      <div class="score-label">実装済み項目</div>
+    </div>
+    <div class="score-card">
+      <div class="score warn">1</div>
+      <div class="score-label">残課題</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>改修済みSEOチェックリスト</h3>
+    <table>
+      <thead><tr><th>項目</th><th>Before</th><th>After</th><th>変更内容</th></tr></thead>
+      <tbody>
+        <tr><td>タイトルへのキーワード配置</td><td><span class="badge badge-green">済</span></td><td><span class="badge badge-green">強化</span></td><td>先頭30文字以内にキーワード配置指示を追加</td></tr>
+        <tr><td>リード文SEO最適化</td><td><span class="badge badge-red">未</span></td><td><span class="badge badge-green">済</span></td><td>冒頭120文字以内にキーワード含める指示を追加</td></tr>
+        <tr><td>キーワード密度</td><td><span class="badge badge-red">未</span></td><td><span class="badge badge-green">済</span></td><td>1〜3%密度の具体的指示を追加</td></tr>
+        <tr><td>meta description</td><td><span class="badge badge-red">未</span></td><td><span class="badge badge-green">済</span></td><td>metaDescription項目を出力フォーマットに追加、excerptと差別化</td></tr>
+        <tr><td>FAQ構造化データ</td><td><span class="badge badge-red">未</span></td><td><span class="badge badge-green">済</span></td><td>JSON-LD(FAQPage)を記事末に自動挿入</td></tr>
+        <tr><td>内部リンク挿入</td><td><span class="badge badge-red">未</span></td><td><span class="badge badge-green">済</span></td><td>INTERNAL_LINKコメント挿入指示を追加</td></tr>
+        <tr><td>まとめ+CTA</td><td><span class="badge badge-yellow">部分</span></td><td><span class="badge badge-green">済</span></td><td>全記事タイプにまとめ+CTA指示を共通化</td></tr>
+        <tr><td>画像ファイル名</td><td><span class="badge badge-red">未</span></td><td><span class="badge badge-green">済</span></td><td>スラッグベースの命名に変更</td></tr>
+        <tr><td>見出しキーワード</td><td><span class="badge badge-yellow">部分</span></td><td><span class="badge badge-green">済</span></td><td>H2/H3にキーワード・関連語を含める指示を追加</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>変更ファイル一覧</h3>
+    <table>
+      <thead><tr><th>ファイル</th><th>変更種別</th></tr></thead>
+      <tbody>
+        <tr><td>src/blog-generator/prompt-templates.ts</td><td>SEO対策ルール追加、metaDescription/FAQ出力指示追加</td></tr>
+        <tr><td>src/blog-generator/blog-generator.service.ts</td><td>FAQ JSON-LD生成、metaDescription対応</td></tr>
+        <tr><td>src/blog-generator/prompt-templates.spec.ts</td><td>新規テスト24件</td></tr>
+        <tr><td>src/blog-generator/blog-generator.service.spec.ts</td><td>新規テスト12件</td></tr>
+        <tr><td>src/wordpress/wordpress.service.spec.ts</td><td>新規テスト6件</td></tr>
+        <tr><td>public/test-seo-report.html</td><td>本レポート</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>残課題</h3>
+    <ul>
+      <li>WordPress SEOプラグイン(Yoast/RankMath)のmeta API連携 - プラグイン側の設定に依存するため今回は未実装</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

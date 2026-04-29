@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ブログ分析レポート | 管楽器リペアマン育成プロジェクト 既存記事の観点分析</title>
+  <style>
+    :root {
+      --primary: #1a3a5c;
+      --accent: #e67e22;
+      --accent-light: #fdf2e9;
+      --bg: #f8f9fa;
+      --card: #ffffff;
+      --border: #dee2e6;
+      --text: #333;
+      --muted: #6c757d;
+      --code-bg: #f1f3f5;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.85;
+      font-size: 15px;
+    }
+    header {
+      background: linear-gradient(135deg, #2c3e50, var(--accent));
+      color: #fff;
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+    header h1 { font-size: 1.7rem; font-weight: 700; margin-bottom: 8px; }
+    header p { font-size: 0.95rem; opacity: 0.85; }
+    header .meta { margin-top: 14px; font-size: 0.82rem; opacity: 0.65; }
+    .wrapper { max-width: 980px; margin: 0 auto; padding: 32px 20px 60px; }
+
+    /* TOC */
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px 28px;
+      margin-bottom: 40px;
+    }
+    .toc h2 { font-size: 1.05rem; margin-bottom: 12px; color: var(--primary); }
+    .toc ol { padding-left: 1.4em; }
+    .toc li { margin-bottom: 5px; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* Sections */
+    section { margin-bottom: 48px; }
+    section > h2 {
+      font-size: 1.3rem;
+      color: var(--primary);
+      border-bottom: 3px solid var(--accent);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+    h3 { font-size: 1.08rem; color: var(--primary); margin: 22px 0 10px; }
+    h4 { font-size: 0.95rem; color: var(--muted); margin: 14px 0 8px; font-weight: 600; }
+    p, ul, ol { margin-bottom: 14px; }
+    ul, ol { padding-left: 1.6em; }
+    li { margin-bottom: 4px; }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+
+    /* Article card grid */
+    .article-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .article-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+    }
+    .article-card .slug {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: monospace;
+      margin-bottom: 6px;
+    }
+    .article-card h4 {
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin: 0 0 8px;
+      font-weight: 700;
+    }
+    .article-card .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .article-card .tag-type {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+    th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+    th { background: var(--primary); color: #fff; font-weight: 600; }
+    tr:nth-child(even) { background: #f8f9fa; }
+
+    /* Tags */
+    .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin: 2px; }
+    .tag-ai { background: #dbeafe; color: #1e40af; }
+    .tag-manual { background: #fef3c7; color: #92400e; }
+    .tag-repair { background: #d1fae5; color: #065f46; }
+    .tag-career { background: #ede9fe; color: #5b21b6; }
+    .tag-knowledge { background: #fce7f3; color: #9d174d; }
+    .tag-report { background: #ffedd5; color: #9a3412; }
+    .tag-maintenance { background: #e0f2fe; color: #075985; }
+
+    /* Chart-like bars */
+    .bar-chart { margin-bottom: 20px; }
+    .bar-row { display: flex; align-items: center; margin-bottom: 8px; }
+    .bar-label { width: 160px; font-size: 0.88rem; flex-shrink: 0; }
+    .bar-track { flex: 1; background: #eee; border-radius: 6px; height: 28px; position: relative; }
+    .bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 10px; font-size: 0.78rem; font-weight: 600; color: #fff; min-width: 30px; }
+    .bar-count { margin-left: 10px; font-size: 0.82rem; color: var(--muted); }
+
+    /* Highlight boxes */
+    .highlight {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-light);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 16px;
+    }
+    .highlight-blue {
+      border-left-color: #3b82f6;
+      background: #eff6ff;
+    }
+    .highlight-green {
+      border-left-color: #10b981;
+      background: #ecfdf5;
+    }
+    .highlight-red {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+
+    /* Summary stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      text-align: center;
+    }
+    .stat-card .num { font-size: 2rem; font-weight: 800; color: var(--accent); }
+    .stat-card .label { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+
+    /* Comparison table */
+    .compare-good { color: #059669; font-weight: 600; }
+    .compare-bad { color: #dc2626; font-weight: 600; }
+    .compare-neutral { color: var(--muted); }
+
+    footer {
+      text-align: center;
+      padding: 32px 20px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      border-top: 1px solid var(--border);
+    }
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.2rem; }
+      .wrapper { padding: 16px 12px 40px; }
+      .article-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .bar-label { width: 110px; font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>既存ブログ記事 分析レポート</h1>
+  <p>管楽器リペアマン育成プロジェクト — repairman.gakkiou.com 掲載記事の観点分析</p>
+  <div class="meta">分析対象: 16記事（スクリーンショットベース） | 作成日: 2026-04-22</div>
+</header>
+
+<div class="wrapper">
+
+  <!-- 目次 -->
+  <nav class="toc">
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#summary">サマリー</a></li>
+      <li><a href="#article-list">記事一覧と分類</a></li>
+      <li><a href="#content-types">コンテンツタイプ別分析</a></li>
+      <li><a href="#structure">記事構成パターン</a></li>
+      <li><a href="#visual">ビジュアル・画像の使い方</a></li>
+      <li><a href="#seo">SEO・タイトル設計</a></li>
+      <li><a href="#tone">文体・トーン分析</a></li>
+      <li><a href="#ai-vs-manual">AI生成記事 vs 手動記事の差異</a></li>
+      <li><a href="#strengths">強み・良い点</a></li>
+      <li><a href="#improvements">改善余地・課題</a></li>
+      <li><a href="#recommendations">自動生成への反映提案</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================ -->
+  <!-- 1. サマリー -->
+  <!-- ============================================ -->
+  <section id="summary">
+    <h2>1. サマリー</h2>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="num">16</div>
+        <div class="label">分析対象記事数</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">6</div>
+        <div class="label">コンテンツカテゴリ</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">2</div>
+        <div class="label">記事タイプ（AI / 手動）</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">3</div>
+        <div class="label">連載シリーズ</div>
+      </div>
+    </div>
+
+    <div class="highlight">
+      <strong>全体傾向:</strong>
+      記事は大きく「AI生成記事（SEO・知識系）」と「手動作成記事（現場レポート・人物紹介系）」の2種類に分かれています。
+      AI生成記事はイラスト画像＋構造化された見出しが特徴で、手動記事は実際の作業写真＋現場感のある語りが特徴です。
+      サイト全体として「修理技術の実践」「リペアマンという職業の魅力」「楽器の知識」の3軸でコンテンツが構成されています。
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 2. 記事一覧と分類 -->
+  <!-- ============================================ -->
+  <section id="article-list">
+    <h2>2. 記事一覧と分類</h2>
+
+    <div class="article-grid">
+      <!-- 1 -->
+      <div class="article-card">
+        <div class="slug">clarinet-key-polishing</div>
+        <h4>クラリネット キーの磨き方</h4>
+        <div class="tags">
+          <span class="tag tag-repair">修理テクニック</span>
+          <span class="tag tag-manual">手動作成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">実際の楽器写真を使用。キーの研磨手順を写真付きで解説。工具のアップ写真あり。</p>
+      </div>
+      <!-- 2 -->
+      <div class="article-card">
+        <div class="slug">flute-no-sound-causes-fix</div>
+        <h4>フルートの音が出ない原因と対処法</h4>
+        <div class="tags">
+          <span class="tag tag-knowledge">楽器の知識</span>
+          <span class="tag tag-ai">AI生成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">AI生成イラスト（暗めのフルート画像）をアイキャッチに使用。H2/H3で構造化、原因と対処法を網羅。</p>
+      </div>
+      <!-- 3 -->
+      <div class="article-card">
+        <div class="slug">furukawa</div>
+        <h4>古川先生のリペア紹介（第1回）</h4>
+        <div class="tags">
+          <span class="tag tag-career">人物紹介</span>
+          <span class="tag tag-manual">手動作成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">AI生成アイキャッチ（職人風イラスト）＋実際の工具写真。リペアマンの人物像・経歴を紹介。</p>
+      </div>
+      <!-- 4 -->
+      <div class="article-card">
+        <div class="slug">furukawa-2</div>
+        <h4>古川先生のリペア紹介（第2回）</h4>
+        <div class="tags">
+          <span class="tag tag-career">人物紹介</span>
+          <span class="tag tag-manual">手動作成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">作業中の写真（人物が実際に楽器を修理する姿）。パーツの実物写真。現場の臨場感。</p>
+      </div>
+      <!-- 5 -->
+      <div class="article-card">
+        <div class="slug">furukawa-3</div>
+        <h4>古川先生のリペア紹介（第3回）</h4>
+        <div class="tags">
+          <span class="tag tag-career">人物紹介</span>
+          <span class="tag tag-manual">手動作成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">手元のアップ写真（実際の修理作業中）。シリーズ最終回として具体的な修理の様子を掲載。</p>
+      </div>
+      <!-- 6 -->
+      <div class="article-card">
+        <div class="slug">how-to-become-repairman</div>
+        <h4>管楽器リペアマンになるには</h4>
+        <div class="tags">
+          <span class="tag tag-career">キャリア</span>
+          <span class="tag tag-ai">AI生成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">アニメ風イラスト（ホルン＋キャラクター）をアイキャッチに使用。キャリアパスの解説、見出し構造が整然。</p>
+      </div>
+      <!-- 7 -->
+      <div class="article-card">
+        <div class="slug">instrument-lifespan-maintenance</div>
+        <h4>楽器の寿命とメンテナンス</h4>
+        <div class="tags">
+          <span class="tag tag-maintenance">メンテナンス</span>
+          <span class="tag tag-ai">AI生成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">複数のAI/素材画像（ホルン、分解パーツ等）を本文中に配置。楽器別の寿命情報を網羅。</p>
+      </div>
+      <!-- 8 -->
+      <div class="article-card">
+        <div class="slug">mouthpiece-dents-effects</div>
+        <h4>マウスピースの凹みが演奏に与える影響</h4>
+        <div class="tags">
+          <span class="tag tag-knowledge">楽器の知識</span>
+          <span class="tag tag-ai">AI生成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">トランペットのイラスト＋図解（スロート/シャンクの説明図）。専門知識をビジュアルで補足。</p>
+      </div>
+      <!-- 9 -->
+      <div class="article-card">
+        <div class="slug">repair-furukawa-learning</div>
+        <h4>古川先生に学ぶ修理の心得</h4>
+        <div class="tags">
+          <span class="tag tag-career">人物紹介</span>
+          <span class="tag tag-manual">手動作成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">人物写真（笑顔のリペアマン）＋修理現場の写真。人間味のある語り口で修理への姿勢を紹介。</p>
+      </div>
+      <!-- 10 -->
+      <div class="article-card">
+        <div class="slug">repair-report-4blade-balance-overhaul</div>
+        <h4>修理レポート：4枚刃バランス オーバーホール</h4>
+        <div class="tags">
+          <span class="tag tag-report">修理レポート</span>
+          <span class="tag tag-manual">手動作成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">最も詳細かつ長い記事。目次構成あり。オレンジ背景の見出しブロック、引用ブロック、関連記事カードなど、Swellテーマの装飾を多用。</p>
+      </div>
+      <!-- 11 -->
+      <div class="article-card">
+        <div class="slug">repairman-job-introduction-1</div>
+        <h4>リペアマンのお仕事紹介（第1回）</h4>
+        <div class="tags">
+          <span class="tag tag-career">キャリア</span>
+          <span class="tag tag-manual">手動作成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">実際の修理現場写真を複数掲載（分解中の楽器、タンポ交換の様子）。作業の実態を写真で伝達。</p>
+      </div>
+      <!-- 12 -->
+      <div class="article-card">
+        <div class="slug">repairman-job-introduction-2</div>
+        <h4>リペアマンのお仕事紹介（第2回）</h4>
+        <div class="tags">
+          <span class="tag tag-career">キャリア</span>
+          <span class="tag tag-manual">手動作成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">分解パーツの写真＋楽器ケースの写真。修理工程をステップで紹介。</p>
+      </div>
+      <!-- 13 -->
+      <div class="article-card">
+        <div class="slug">repairman-job-introduction-2-2</div>
+        <h4>リペアマンのお仕事紹介（第2回 続編）</h4>
+        <div class="tags">
+          <span class="tag tag-career">キャリア</span>
+          <span class="tag tag-ai">AI生成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">AI生成イラスト（楽器パーツ）＋アニメ風キャラクターイラスト＋実際の作業写真の混在。</p>
+      </div>
+      <!-- 14 -->
+      <div class="article-card">
+        <div class="slug">repairman-repair-insights</div>
+        <h4>リペアマンの修理の気づき・知見</h4>
+        <div class="tags">
+          <span class="tag tag-repair">修理テクニック</span>
+          <span class="tag tag-ai">AI生成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">実際の楽器写真（ケース入り）＋楽器パーツ写真＋修理マット上の作業写真。AI本文＋実写画像の組み合わせ。</p>
+      </div>
+      <!-- 15 -->
+      <div class="article-card">
+        <div class="slug">repairman-tools-top3</div>
+        <h4>リペアマンが使う工具 TOP3</h4>
+        <div class="tags">
+          <span class="tag tag-knowledge">楽器の知識</span>
+          <span class="tag tag-ai">AI生成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">緑背景の楽器写真をアイキャッチ＋本文中に工具の実物写真。ランキング形式で構成。</p>
+      </div>
+      <!-- 16 -->
+      <div class="article-card">
+        <div class="slug">saxophone-repair-guide</div>
+        <h4>サックスの修理ガイド</h4>
+        <div class="tags">
+          <span class="tag tag-repair">修理テクニック</span>
+          <span class="tag tag-ai">AI生成</span>
+        </div>
+        <p style="font-size:0.85rem;color:#555;">サックスパーツのイラスト/写真。修理箇所別に解説。H2見出しで構造化。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 3. コンテンツタイプ別分析 -->
+  <!-- ============================================ -->
+  <section id="content-types">
+    <h2>3. コンテンツタイプ別分析</h2>
+
+    <h3>カテゴリ分布</h3>
+    <div class="bar-chart">
+      <div class="bar-row">
+        <span class="bar-label">キャリア・人物紹介</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:44%;background:#7c3aed;">7記事</div>
+        </div>
+        <span class="bar-count">44%</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">修理テクニック</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:19%;background:#059669;">3記事</div>
+        </div>
+        <span class="bar-count">19%</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">楽器の知識</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:19%;background:#db2777;">3記事</div>
+        </div>
+        <span class="bar-count">19%</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">メンテナンス</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:6%;background:#0284c7;">1記事</div>
+        </div>
+        <span class="bar-count">6%</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">修理レポート</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:6%;background:#ea580c;">1記事</div>
+        </div>
+        <span class="bar-count">6%</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">AI生成（SEO）</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:6%;background:#2563eb;">1記事</div>
+        </div>
+        <span class="bar-count">6%</span>
+      </div>
+    </div>
+
+    <h3>AI生成 vs 手動作成</h3>
+    <div class="bar-chart">
+      <div class="bar-row">
+        <span class="bar-label">AI生成記事</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:50%;background:#2563eb;">8記事</div>
+        </div>
+        <span class="bar-count">50%</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">手動作成記事</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:50%;background:#d97706;">8記事</div>
+        </div>
+        <span class="bar-count">50%</span>
+      </div>
+    </div>
+
+    <h3>連載シリーズ</h3>
+    <table>
+      <tr><th>シリーズ名</th><th>記事数</th><th>スラッグパターン</th></tr>
+      <tr><td>古川先生のリペア紹介</td><td>3〜4回</td><td>furukawa, furukawa-2, furukawa-3, repair-furukawa-learning</td></tr>
+      <tr><td>リペアマンのお仕事紹介</td><td>3回</td><td>repairman-job-introduction-1, -2, -2-2</td></tr>
+      <tr><td>修理レポート</td><td>1回〜</td><td>repair-report-4blade-balance-overhaul</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 4. 記事構成パターン -->
+  <!-- ============================================ -->
+  <section id="structure">
+    <h2>4. 記事構成パターン</h2>
+
+    <h3>パターンA: AI生成 SEO記事</h3>
+    <div class="card">
+      <p><strong>該当:</strong> flute-no-sound, how-to-become-repairman, instrument-lifespan, mouthpiece-dents, saxophone-repair-guide, repairman-tools-top3</p>
+      <table>
+        <tr><th>要素</th><th>特徴</th></tr>
+        <tr><td>アイキャッチ画像</td><td>AI生成イラストまたは素材画像（アニメ風キャラ、楽器イラスト）</td></tr>
+        <tr><td>見出し構成</td><td>H2見出し 3〜5個 + H3サブ見出し（オレンジ背景バー）</td></tr>
+        <tr><td>本文</td><td>段落形式で整理された解説。箇条書きを適宜使用</td></tr>
+        <tr><td>画像配置</td><td>見出し間にAIイラスト/素材画像を1〜3枚挿入</td></tr>
+        <tr><td>文字数</td><td>1500〜2500文字程度</td></tr>
+        <tr><td>CTA</td><td>記事末にSwell関連記事ブロックまたはバナーリンク</td></tr>
+      </table>
+    </div>
+
+    <h3>パターンB: 手動作成 現場レポート / 人物紹介記事</h3>
+    <div class="card">
+      <p><strong>該当:</strong> clarinet-key-polishing, furukawa系, repair-report, repairman-job-introduction系</p>
+      <table>
+        <tr><th>要素</th><th>特徴</th></tr>
+        <tr><td>アイキャッチ画像</td><td>実際の修理現場写真、人物写真、楽器パーツのアップ写真</td></tr>
+        <tr><td>見出し構成</td><td>H2見出し 2〜6個（Swellオレンジ背景バー）</td></tr>
+        <tr><td>本文</td><td>語りかけるトーン、現場の体験・エピソードベース</td></tr>
+        <tr><td>画像配置</td><td>実際の作業写真を本文中に多数配置（3〜8枚）</td></tr>
+        <tr><td>文字数</td><td>記事により幅広い（短いもの〜3000文字超の長文レポートまで）</td></tr>
+        <tr><td>特殊要素</td><td>引用ブロック、Swellの装飾ブロック、関連記事カード</td></tr>
+      </table>
+    </div>
+
+    <h3>パターンC: 修理レポート（詳細版）</h3>
+    <div class="card">
+      <p><strong>該当:</strong> repair-report-4blade-balance-overhaul</p>
+      <table>
+        <tr><th>要素</th><th>特徴</th></tr>
+        <tr><td>記事長</td><td>最長（3000文字超の大型レポート）</td></tr>
+        <tr><td>目次</td><td>Swellの自動目次機能を活用</td></tr>
+        <tr><td>見出し構成</td><td>H2見出し 5〜7個の詳細構成</td></tr>
+        <tr><td>引用ブロック</td><td>リペアマンの感想・気づきを引用スタイルで掲載</td></tr>
+        <tr><td>関連記事</td><td>記事末に関連記事カードを3〜4つ配置</td></tr>
+        <tr><td>フッター</td><td>サイト全体のナビゲーション、カテゴリリンクが表示</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 5. ビジュアル・画像の使い方 -->
+  <!-- ============================================ -->
+  <section id="visual">
+    <h2>5. ビジュアル・画像の使い方</h2>
+
+    <h3>画像タイプの分布</h3>
+    <table>
+      <tr><th>画像タイプ</th><th>使用記事数</th><th>説明</th></tr>
+      <tr><td>実写・作業現場写真</td><td>8記事</td><td>実際の修理作業、楽器パーツ、工具のアップ写真。手動記事で多用</td></tr>
+      <tr><td>AI生成イラスト（アニメ風）</td><td>4記事</td><td>キャラクターが楽器を持つイラスト、職人風キャラ。アイキャッチ用</td></tr>
+      <tr><td>AI生成/素材画像（楽器）</td><td>5記事</td><td>楽器の写真的なAI画像。背景が単色・スタジオ風</td></tr>
+      <tr><td>図解・説明図</td><td>1記事</td><td>マウスピースの構造図（スロート/シャンク解説）</td></tr>
+      <tr><td>人物写真</td><td>3記事</td><td>リペアマン本人の顔写真・作業中の写真</td></tr>
+    </table>
+
+    <h3>画像配置のパターン</h3>
+    <ul>
+      <li><strong>アイキャッチ（全記事）</strong>: 記事最上部にフルwidth画像。AI記事はイラスト、手動記事は実写</li>
+      <li><strong>見出し直下（多数）</strong>: H2見出しの直後に関連画像を配置するパターンが頻出</li>
+      <li><strong>本文中の補足</strong>: 説明を補強する形で段落間に画像を挿入</li>
+      <li><strong>丸型クリッピング（一部）</strong>: 人物紹介系で円形にトリミングした写真を使用</li>
+    </ul>
+
+    <div class="highlight">
+      <strong>観察ポイント:</strong>
+      AI生成記事のアイキャッチに「アニメ風キャラクター」イラストが使用されている記事があるが、
+      サイト全体の「プロフェッショナルな修理教育」というトーンとやや不一致に見える場合があります。
+      手動記事の実写写真は「現場感」があり、サイトコンセプトとの親和性が高いと考えられます。
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 6. SEO・タイトル設計 -->
+  <!-- ============================================ -->
+  <section id="seo">
+    <h2>6. SEO・タイトル設計</h2>
+
+    <h3>タイトルのパターン分析</h3>
+    <table>
+      <tr><th>パターン</th><th>例</th><th>出現数</th></tr>
+      <tr><td>「楽器名 + 修理/症状」型</td><td>フルートの音が出ない原因と対処法、サックスの修理ガイド</td><td>4</td></tr>
+      <tr><td>「職業/キャリア紹介」型</td><td>管楽器リペアマンになるには、リペアマンのお仕事紹介</td><td>4</td></tr>
+      <tr><td>「人物名 + リペア」型</td><td>古川先生のリペア紹介</td><td>4</td></tr>
+      <tr><td>「パーツ/工具 + 知識」型</td><td>マウスピースの凹み、リペアマンが使う工具TOP3</td><td>2</td></tr>
+      <tr><td>「修理レポート」型</td><td>修理レポート：4枚刃バランス オーバーホール</td><td>1</td></tr>
+      <tr><td>「メンテナンス」型</td><td>楽器の寿命とメンテナンス</td><td>1</td></tr>
+    </table>
+
+    <h3>SEOスラッグ設計</h3>
+    <div class="card">
+      <p>URLスラッグは英語で統一されており、SEOに適した構成です。</p>
+      <ul>
+        <li><strong>良い例:</strong> <code>flute-no-sound-causes-fix</code>（検索意図が明確）</li>
+        <li><strong>良い例:</strong> <code>saxophone-repair-guide</code>（汎用的なキーワード）</li>
+        <li><strong>改善余地:</strong> <code>furukawa</code>（人名のみで検索意図が不明確）</li>
+        <li><strong>改善余地:</strong> <code>repairman-job-introduction-2-2</code>（連番管理がやや不統一）</li>
+      </ul>
+    </div>
+
+    <h3>見出し（H2）のキーワード含有</h3>
+    <p>AI生成記事ではH2見出しにターゲットキーワードが含まれる傾向があり、SEO的に適切です。
+    手動記事ではH2が短いフレーズや感情的な表現になる傾向があり、SEO観点ではやや弱い場合があります。</p>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 7. 文体・トーン分析 -->
+  <!-- ============================================ -->
+  <section id="tone">
+    <h2>7. 文体・トーン分析</h2>
+
+    <table>
+      <tr><th>観点</th><th>AI生成記事</th><th>手動作成記事</th></tr>
+      <tr>
+        <td>文体</td>
+        <td>「です・ます」調で統一。百科事典的で情報整理型</td>
+        <td>「です・ます」調ベースだが、語りかける口語表現も混在</td>
+      </tr>
+      <tr>
+        <td>専門性</td>
+        <td>広く浅い一般知識。具体的な工具名やメーカー名が少ない</td>
+        <td>深い専門知識。具体的な製品名、手順の細部まで言及</td>
+      </tr>
+      <tr>
+        <td>感情表現</td>
+        <td>控えめで中立的</td>
+        <td>「難しいけど楽しい」「やりがいを感じた」等の個人的体験</td>
+      </tr>
+      <tr>
+        <td>読者への呼びかけ</td>
+        <td>「〜してみてください」「〜がおすすめです」</td>
+        <td>「皆さん」「〜ですよね」等のより親密な表現</td>
+      </tr>
+      <tr>
+        <td>独自性</td>
+        <td>一般的な情報が中心。他サイトとの差別化がやや弱い</td>
+        <td>現場の体験・エピソードに基づく独自コンテンツ</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 8. AI生成記事 vs 手動記事の差異 -->
+  <!-- ============================================ -->
+  <section id="ai-vs-manual">
+    <h2>8. AI生成記事 vs 手動記事の差異</h2>
+
+    <table>
+      <tr><th>観点</th><th>AI生成記事</th><th>手動作成記事</th></tr>
+      <tr>
+        <td>アイキャッチ</td>
+        <td>AI生成イラスト/素材画像<br><span class="compare-neutral">一定の品質だが個性が薄い</span></td>
+        <td>実写写真<br><span class="compare-good">現場感と信頼性が高い</span></td>
+      </tr>
+      <tr>
+        <td>本文中の画像</td>
+        <td>AI生成/素材画像 1〜3枚<br><span class="compare-bad">情報補強として弱い場合がある</span></td>
+        <td>実写写真 3〜8枚<br><span class="compare-good">手順の理解を大幅に助ける</span></td>
+      </tr>
+      <tr>
+        <td>見出し構造</td>
+        <td><span class="compare-good">H2/H3が体系的で整然</span></td>
+        <td><span class="compare-neutral">やや不統一な場合がある</span></td>
+      </tr>
+      <tr>
+        <td>SEO最適化</td>
+        <td><span class="compare-good">キーワード配置が計算的</span></td>
+        <td><span class="compare-neutral">自然だがSEO意識は弱め</span></td>
+      </tr>
+      <tr>
+        <td>情報の深さ</td>
+        <td><span class="compare-bad">広く浅い。一般論にとどまりやすい</span></td>
+        <td><span class="compare-good">深く具体的。現場ならではの知見</span></td>
+      </tr>
+      <tr>
+        <td>Swellブロック活用</td>
+        <td><span class="compare-bad">基本的なH2/p/ulのみ</span></td>
+        <td><span class="compare-good">引用ブロック、関連記事カード、装飾ブロック等を活用</span></td>
+      </tr>
+      <tr>
+        <td>制作コスト</td>
+        <td><span class="compare-good">低い（自動生成）</span></td>
+        <td><span class="compare-bad">高い（撮影・執筆・編集が必要）</span></td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 9. 強み・良い点 -->
+  <!-- ============================================ -->
+  <section id="strengths">
+    <h2>9. 強み・良い点</h2>
+
+    <div class="highlight-green">
+      <h3>サイト全体として</h3>
+      <ul>
+        <li><strong>ニッチな専門性:</strong> 「管楽器リペアマン育成」という非常にニッチな領域に特化しており、競合が少ない</li>
+        <li><strong>コンテンツの二軸構成:</strong> AI生成（SEO集客用）+ 手動作成（ブランド・信頼構築用）のバランスが取れている</li>
+        <li><strong>連載シリーズ:</strong> 古川先生シリーズ、お仕事紹介シリーズなど、リピート訪問を促す連載構成</li>
+        <li><strong>Swellテーマの活用:</strong> 目次自動生成、装飾ブロック、関連記事カードなどの機能を活用</li>
+      </ul>
+    </div>
+
+    <div class="highlight-green">
+      <h3>手動作成記事の強み</h3>
+      <ul>
+        <li><strong>実写写真の豊富さ:</strong> 実際の修理作業を写真で見せることで、説得力と信頼性が格段に高い</li>
+        <li><strong>人物の見える化:</strong> リペアマン本人の顔や作業姿を公開することで親近感とブランド力を構築</li>
+        <li><strong>修理レポートの詳細さ:</strong> オーバーホールレポートはプロの視点から修理工程を詳述しており、独自性が非常に高い</li>
+      </ul>
+    </div>
+
+    <div class="highlight-green">
+      <h3>AI生成記事の強み</h3>
+      <ul>
+        <li><strong>構造の一貫性:</strong> H2/H3の見出し構造が常に整然としており、読みやすい</li>
+        <li><strong>SEOキーワードの配置:</strong> タイトル・見出し・本文にキーワードが自然に配置されている</li>
+        <li><strong>制作効率:</strong> キーワード指定のみで記事が生成でき、コンテンツ量の確保に貢献</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 10. 改善余地・課題 -->
+  <!-- ============================================ -->
+  <section id="improvements">
+    <h2>10. 改善余地・課題</h2>
+
+    <div class="highlight-red">
+      <h3>AI生成記事の課題</h3>
+      <ol>
+        <li>
+          <strong>画像の不一致:</strong>
+          アニメ風キャラクターイラストがサイトの「プロフェッショナルな修理教育」というブランドイメージとやや乖離している場合がある。
+          実際の工具・楽器パーツをモチーフにしたプロフェッショナルなイラストの方が適切かもしれない。
+        </li>
+        <li>
+          <strong>情報の一般性:</strong>
+          AI生成テキストが一般的な知識にとどまり、「このサイトでしか読めない」独自情報が不足している傾向がある。
+          プロンプトに「具体的なメーカー名」「現場でよくあるトラブル事例」等を含める指示の追加を検討してもよいかもしれない。
+        </li>
+        <li>
+          <strong>Swellブロック未活用:</strong>
+          AI生成のHTMLは基本タグ（h2, h3, p, ul）のみで、Swellテーマ特有の装飾ブロック（引用、ふきだし、ボックス装飾、関連記事カード）を使っていない。
+          手動記事との見た目の統一感に差が出る可能性がある。
+        </li>
+        <li>
+          <strong>カテゴリ/タグの未設定:</strong>
+          AI生成時にWordPressカテゴリ・タグが自動で付与されていない可能性がある。
+        </li>
+      </ol>
+    </div>
+
+    <div class="highlight">
+      <h3>サイト全体の課題</h3>
+      <ol>
+        <li>
+          <strong>連載の番号管理:</strong>
+          <code>repairman-job-introduction-2-2</code> のように枝番が発生しており、
+          シリーズの管理・読者のナビゲーションがやや分かりにくい。
+        </li>
+        <li>
+          <strong>メンテナンス系記事の少なさ:</strong>
+          「日常メンテナンス」「セルフケア」系の記事が1本のみ。検索需要が高い可能性のある領域。
+        </li>
+        <li>
+          <strong>修理レポートの継続性:</strong>
+          詳細な修理レポートは1本のみ。このフォーマットは独自性・専門性が非常に高いため、
+          シリーズ化によりSEO・ブランド両面での効果が期待できるかもしれない。
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 11. 自動生成への反映提案 -->
+  <!-- ============================================ -->
+  <section id="recommendations">
+    <h2>11. 自動生成への反映提案</h2>
+
+    <p>分析結果を踏まえ、blog-autoシステムの改善に反映できる観点をまとめます。</p>
+
+    <h3>11.1 プロンプト改善</h3>
+    <div class="card">
+      <table>
+        <tr><th>改善項目</th><th>現状</th><th>提案</th></tr>
+        <tr>
+          <td>専門性の深さ</td>
+          <td>一般的な解説にとどまる</td>
+          <td>「具体的な工具名（ヤットコ、リーマー等）」「メーカー名」「現場でよくある失敗例」を含めるよう指示を追加</td>
+        </tr>
+        <tr>
+          <td>独自性</td>
+          <td>他サイトでも読める内容</td>
+          <td>「リペアマンならではの視点」「修理現場でのあるある」「プロだけが知るコツ」を必ず含めるよう指示</td>
+        </tr>
+        <tr>
+          <td>トーン</td>
+          <td>百科事典的で硬い</td>
+          <td>手動記事のトーンに近づけ、「語りかけ」「現場エピソード」を織り交ぜるよう指示</td>
+        </tr>
+        <tr>
+          <td>構成の多様性</td>
+          <td>常にH2 → 本文の繰り返し</td>
+          <td>「Q&A形式」「ランキング形式」「ビフォーアフター形式」など、記事タイプごとの構成テンプレートを導入</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>11.2 画像生成の改善</h3>
+    <div class="card">
+      <table>
+        <tr><th>改善項目</th><th>現状</th><th>提案</th></tr>
+        <tr>
+          <td>画風</td>
+          <td>アニメ風キャラクター</td>
+          <td>プロフェッショナルで温かみのあるイラスト（工具・楽器パーツ中心）に変更</td>
+        </tr>
+        <tr>
+          <td>本文中の画像</td>
+          <td>アイキャッチ1枚のみ</td>
+          <td>H2見出しごとに関連する補足画像を生成・挿入する機能の追加を検討</td>
+        </tr>
+        <tr>
+          <td>図解</td>
+          <td>なし</td>
+          <td>楽器の構造図・修理手順の図解を生成する機能の検討（mouthpiece-dents記事の図解が参考になる）</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>11.3 WordPress連携の改善</h3>
+    <div class="card">
+      <table>
+        <tr><th>改善項目</th><th>現状</th><th>提案</th></tr>
+        <tr>
+          <td>カテゴリ自動付与</td>
+          <td>未実装</td>
+          <td>キーワードに基づきWordPressカテゴリを自動選択して投稿</td>
+        </tr>
+        <tr>
+          <td>タグ自動生成</td>
+          <td>未実装</td>
+          <td>記事内容から関連タグを抽出し、自動付与</td>
+        </tr>
+        <tr>
+          <td>Swellブロック対応</td>
+          <td>基本HTMLタグのみ</td>
+          <td>Swellの装飾ブロック（ボックス、ふきだし等）のHTMLクラスを出力に含める</td>
+        </tr>
+        <tr>
+          <td>関連記事カード</td>
+          <td>未実装</td>
+          <td>記事末に関連する既存記事へのリンクカードを自動挿入</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>11.4 コンテンツ戦略への提案</h3>
+    <div class="card">
+      <p>現在の記事カテゴリ分布から、以下の領域でのAI記事生成を優先すると、サイト全体のコンテンツバランスが改善される可能性があります。</p>
+      <table>
+        <tr><th>優先度</th><th>カテゴリ</th><th>キーワード例</th><th>理由</th></tr>
+        <tr>
+          <td>高</td>
+          <td>日常メンテナンス</td>
+          <td>「トランペット 手入れ」「クラリネット 保管方法」「オイル 差し方」</td>
+          <td>現状1記事のみ。検索ボリュームが高く、初心者向けの集客記事として有効</td>
+        </tr>
+        <tr>
+          <td>高</td>
+          <td>楽器別修理ガイド</td>
+          <td>「オーボエ 修理」「ホルン バルブ 固い」「チューバ 凹み 修理」</td>
+          <td>フルート・サックス・クラリネット以外の楽器記事が不足</td>
+        </tr>
+        <tr>
+          <td>中</td>
+          <td>修理工具・材料</td>
+          <td>「タンポ 種類」「コルクグリス 選び方」「リペア 工具 初心者」</td>
+          <td>工具TOP3記事が好例。シリーズ化の余地がある</td>
+        </tr>
+        <tr>
+          <td>中</td>
+          <td>Q&A・トラブルシューティング</td>
+          <td>「楽器 音が詰まる」「キーが戻らない 原因」「管体 緑青 除去」</td>
+          <td>検索クエリに直結しやすく、SEO効果が高い</td>
+        </tr>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <p>ブログ分析レポート — 管楽器リペアマン育成プロジェクト 既存記事の観点分析</p>
+  <p>分析対象: repairman.gakkiou.com 掲載ブログ記事 16件（スクリーンショットベース） | 作成日: 2026-04-22</p>
+</footer>
+
+</body>
+</html>

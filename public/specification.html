@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>仕様設計書 | blog-auto — 管楽器リペアマン育成プロジェクト ブログ自動生成システム</title>
+  <style>
+    :root {
+      --primary: #1a3a5c;
+      --accent: #2980b9;
+      --bg: #f8f9fa;
+      --card: #ffffff;
+      --border: #dee2e6;
+      --text: #333;
+      --muted: #6c757d;
+      --code-bg: #f1f3f5;
+      --success: #28a745;
+      --warning: #ffc107;
+      --danger: #dc3545;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.8;
+      font-size: 15px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+    header h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+    header p { font-size: 0.95rem; opacity: 0.85; }
+    header .meta {
+      margin-top: 16px;
+      font-size: 0.82rem;
+      opacity: 0.7;
+    }
+
+    /* ── Layout ── */
+    .wrapper {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* ── TOC ── */
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px 28px;
+      margin-bottom: 40px;
+    }
+    .toc h2 { font-size: 1.05rem; margin-bottom: 12px; color: var(--primary); }
+    .toc ol { padding-left: 1.4em; }
+    .toc li { margin-bottom: 6px; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── Sections ── */
+    section { margin-bottom: 48px; }
+    section > h2 {
+      font-size: 1.35rem;
+      color: var(--primary);
+      border-bottom: 3px solid var(--accent);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+    section h3 {
+      font-size: 1.1rem;
+      color: var(--primary);
+      margin: 24px 0 10px;
+    }
+    section h4 {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin: 16px 0 8px;
+      font-weight: 600;
+    }
+    p, ul, ol { margin-bottom: 14px; }
+    ul, ol { padding-left: 1.6em; }
+    li { margin-bottom: 4px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      text-align: left;
+    }
+    th {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+    }
+    tr:nth-child(even) { background: #f8f9fa; }
+
+    /* ── Code ── */
+    code {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'SFMono-Regular', 'Fira Code', monospace;
+      font-size: 0.88em;
+    }
+    pre {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    pre code { background: transparent; padding: 0; color: inherit; }
+
+    /* ── Diagram (ASCII) ── */
+    .diagram {
+      background: #1e1e2e;
+      color: #89b4fa;
+      padding: 24px;
+      border-radius: 8px;
+      font-family: 'SFMono-Regular', monospace;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      overflow-x: auto;
+      white-space: pre;
+      margin-bottom: 20px;
+    }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fff;
+    }
+    .badge-done { background: var(--success); }
+    .badge-todo { background: var(--warning); color: #333; }
+    .badge-plan { background: var(--accent); }
+
+    /* ── Flow steps ── */
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .flow-step .num {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .flow-step .detail { flex: 1; }
+    .flow-step .detail strong { color: var(--primary); }
+
+    /* ── Notes ── */
+    .note {
+      background: #fff3cd;
+      border-left: 4px solid var(--warning);
+      padding: 14px 18px;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    .note-info {
+      background: #d1ecf1;
+      border-left-color: var(--accent);
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 32px 20px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.3rem; }
+      .wrapper { padding: 20px 14px 40px; }
+      pre, .diagram { font-size: 0.75rem; padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>blog-auto 仕様設計書</h1>
+  <p>管楽器リペアマン育成プロジェクト — ブログ自動生成システム</p>
+  <div class="meta">
+    対象サイト: repairman.gakkiou.com &nbsp;|&nbsp; バージョン: 1.0 &nbsp;|&nbsp; 作成日: 2026-04-22
+  </div>
+</header>
+
+<div class="wrapper">
+
+  <!-- ============================================ -->
+  <!-- 目次                                          -->
+  <!-- ============================================ -->
+  <nav class="toc" id="toc">
+    <h2>目次</h2>
+    <ol>
+      <li><a href="#overview">プロジェクト概要</a></li>
+      <li><a href="#target-site">対象サイト情報</a></li>
+      <li><a href="#architecture">システムアーキテクチャ</a></li>
+      <li><a href="#tech-stack">技術スタック</a></li>
+      <li><a href="#modules">モジュール構成</a></li>
+      <li><a href="#data-flow">データフロー</a></li>
+      <li><a href="#api-spec">API仕様</a></li>
+      <li><a href="#prompt-design">プロンプト設計</a></li>
+      <li><a href="#image-gen">サムネイル画像生成</a></li>
+      <li><a href="#wordpress">WordPress連携</a></li>
+      <li><a href="#env">環境変数・設定</a></li>
+      <li><a href="#directory">ディレクトリ構成</a></li>
+      <li><a href="#error-handling">エラーハンドリング</a></li>
+      <li><a href="#future">拡張計画</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================ -->
+  <!-- 1. プロジェクト概要                             -->
+  <!-- ============================================ -->
+  <section id="overview">
+    <h2>1. プロジェクト概要</h2>
+    <div class="card">
+      <h3>目的</h3>
+      <p>
+        <strong>管楽器リペアマン育成プロジェクト</strong>（repairman.gakkiou.com）のブログセクションに掲載する記事を、
+        AIを活用して自動生成し、WordPress上に下書き投稿するバックエンドシステムです。
+      </p>
+      <h3>解決する課題</h3>
+      <ul>
+        <li>管楽器修理に関する専門的なブログ記事を、キーワード指定のみで高品質に生成</li>
+        <li>SEOを意識したタイトル・本文・構成の自動最適化</li>
+        <li>サムネイル画像の自動生成・アップロードにより、制作工数を大幅削減</li>
+        <li>WordPress REST APIを介した下書き自動投稿で、公開前の確認フローを維持</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 2. 対象サイト情報                               -->
+  <!-- ============================================ -->
+  <section id="target-site">
+    <h2>2. 対象サイト情報</h2>
+    <table>
+      <tr><th>項目</th><th>内容</th></tr>
+      <tr><td>サイト名</td><td>管楽器リペアマン育成プロジェクト｜修理の実践教育</td></tr>
+      <tr><td>URL</td><td>https://repairman.gakkiou.com</td></tr>
+      <tr><td>ブログURL</td><td>https://repairman.gakkiou.com/category/blog/</td></tr>
+      <tr><td>CMS</td><td>WordPress（Swellテーマ）</td></tr>
+      <tr><td>キャッチフレーズ</td><td>現場で学び、現場で活きる。管楽器の未来を支える人を育てる。</td></tr>
+      <tr><td>主要テーマ</td><td>管楽器修理技術、リペアマン育成、実践教育、楽器メンテナンス</td></tr>
+    </table>
+
+    <h3>想定読者ペルソナ</h3>
+    <div class="card">
+      <ul>
+        <li><strong>管楽器修理を学びたい人</strong> — 専門学校生、転職検討者、楽器店スタッフ</li>
+        <li><strong>現役リペアマン</strong> — スキルアップや新技術に関心のある修理技術者</li>
+        <li><strong>楽器演奏者</strong> — 自分でできるメンテナンス方法を知りたいプレイヤー</li>
+        <li><strong>吹奏楽部顧問・指導者</strong> — 楽器管理やメンテナンス知識を求める教育関係者</li>
+      </ul>
+    </div>
+
+    <h3>想定ブログカテゴリ</h3>
+    <table>
+      <tr><th>カテゴリ名</th><th>内容例</th></tr>
+      <tr><td>修理テクニック</td><td>タンポ交換、ハンダ付け、凹み修正、バルブ調整</td></tr>
+      <tr><td>楽器メンテナンス</td><td>日常の手入れ方法、保管のコツ、オイル・グリスの使い方</td></tr>
+      <tr><td>リペアマンの仕事</td><td>仕事内容紹介、1日のスケジュール、やりがい、キャリアパス</td></tr>
+      <tr><td>楽器の知識</td><td>楽器の構造解説、素材の違い、歴史、メーカー比較</td></tr>
+      <tr><td>育成・教育</td><td>研修プログラム、スキルアップのステップ、資格情報</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 3. システムアーキテクチャ                        -->
+  <!-- ============================================ -->
+  <section id="architecture">
+    <h2>3. システムアーキテクチャ</h2>
+    <div class="diagram">┌─────────────────────────────────────────────────────────────────┐
+│                       blog-auto (NestJS)                        │
+│                         Port: 3100                              │
+│                                                                 │
+│  ┌─────────────────────┐    ┌──────────────────────────────┐   │
+│  │  BlogGenerator       │    │  WordPress Module             │   │
+│  │  Module              │    │                               │   │
+│  │  ┌────────────────┐  │    │  ┌─────────────────────────┐ │   │
+│  │  │ Controller      │  │    │  │ Controller              │ │   │
+│  │  │ POST /generate  │  │    │  │ CRUD /wordpress/*       │ │   │
+│  │  └───────┬────────┘  │    │  └─────────────────────────┘ │   │
+│  │          │            │    │  ┌─────────────────────────┐ │   │
+│  │  ┌───────▼────────┐  │    │  │ Service                 │ │   │
+│  │  │ Service         │──┼────┤  │ WordPress REST API      │ │   │
+│  │  │ (Orchestrator)  │  │    │  │ Client (Axios)          │ │   │
+│  │  └───┬────────┬───┘  │    │  └────────────┬────────────┘ │   │
+│  │      │        │       │    │               │              │   │
+│  │  ┌───▼──┐ ┌──▼────┐  │    └───────────────┼──────────────┘   │
+│  │  │Image │ │Claude │  │                    │                  │
+│  │  │Gen   │ │API    │  │                    │                  │
+│  │  └──┬───┘ └───┬───┘  │                    │                  │
+│  └─────┼─────────┼──────┘                    │                  │
+└────────┼─────────┼───────────────────────────┼──────────────────┘
+         │         │                           │
+    ┌────▼───┐ ┌──▼────────┐         ┌────────▼──────────┐
+    │ Google │ │ Anthropic  │         │  WordPress        │
+    │ Imagen │ │ Claude API │         │  REST API         │
+    │ 3.0    │ │ (Sonnet 4) │         │  /wp-json/wp/v2   │
+    └────────┘ └────────────┘         └───────────────────┘
+                                      repairman.gakkiou.com</div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 4. 技術スタック                                -->
+  <!-- ============================================ -->
+  <section id="tech-stack">
+    <h2>4. 技術スタック</h2>
+    <table>
+      <tr><th>レイヤー</th><th>技術</th><th>バージョン</th><th>用途</th></tr>
+      <tr><td>ランタイム</td><td>Node.js</td><td>20+</td><td>実行環境</td></tr>
+      <tr><td>フレームワーク</td><td>NestJS</td><td>11.x</td><td>APIサーバー</td></tr>
+      <tr><td>言語</td><td>TypeScript</td><td>5.7+</td><td>型安全な開発</td></tr>
+      <tr><td>LLM（記事生成）</td><td>Anthropic Claude Sonnet 4</td><td>-</td><td>ブログ本文の生成</td></tr>
+      <tr><td>画像生成</td><td>Google Imagen 3.0</td><td>-</td><td>サムネイル画像の生成</td></tr>
+      <tr><td>HTTPクライアント</td><td>Axios</td><td>1.15+</td><td>WordPress REST API通信</td></tr>
+      <tr><td>CMS連携</td><td>WordPress REST API v2</td><td>-</td><td>記事投稿・メディア管理</td></tr>
+      <tr><td>テスト</td><td>Jest</td><td>30.x</td><td>ユニット/E2Eテスト</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 5. モジュール構成                               -->
+  <!-- ============================================ -->
+  <section id="modules">
+    <h2>5. モジュール構成</h2>
+
+    <h3>5.1 AppModule（ルートモジュール）</h3>
+    <div class="card">
+      <p>アプリケーション全体を束ねるルートモジュール。ConfigModule（グローバル）、WordpressModule、BlogGeneratorModule をインポートします。</p>
+      <ul>
+        <li><code>GET /</code> — ヘルスチェック用エンドポイント</li>
+        <li>静的ファイル配信: <code>public/</code> ディレクトリ</li>
+        <li>リッスンポート: 3100（PORT環境変数で変更可能）</li>
+      </ul>
+    </div>
+
+    <h3>5.2 BlogGeneratorModule</h3>
+    <div class="card">
+      <p>ブログ記事生成のコアモジュール。Claude APIによるコンテンツ生成、Imagen 3.0によるサムネイル生成、WordPress投稿をオーケストレーションします。</p>
+      <table>
+        <tr><th>ファイル</th><th>責務</th></tr>
+        <tr><td><code>blog-generator.controller.ts</code></td><td>APIエンドポイント定義（POST /blog-generator/generate）</td></tr>
+        <tr><td><code>blog-generator.service.ts</code></td><td>生成パイプライン全体のオーケストレーション</td></tr>
+        <tr><td><code>image-generator.service.ts</code></td><td>Google Imagen 3.0によるサムネイル画像生成</td></tr>
+        <tr><td><code>blog-generator.dto.ts</code></td><td>リクエストDTO（GenerateBlogDto）</td></tr>
+      </table>
+    </div>
+
+    <h3>5.3 WordpressModule</h3>
+    <div class="card">
+      <p>WordPress REST API v2との通信を抽象化するモジュール。WordpressServiceをエクスポートし、BlogGeneratorModuleから利用されます。</p>
+      <table>
+        <tr><th>ファイル</th><th>責務</th></tr>
+        <tr><td><code>wordpress.controller.ts</code></td><td>WordPress CRUD操作のRESTエンドポイント</td></tr>
+        <tr><td><code>wordpress.service.ts</code></td><td>WordPress REST APIクライアント（Axios + Basic Auth）</td></tr>
+        <tr><td><code>wordpress.dto.ts</code></td><td>CreatePostDto / UpdatePostDto</td></tr>
+      </table>
+      <h4>提供メソッド一覧</h4>
+      <table>
+        <tr><th>メソッド</th><th>概要</th></tr>
+        <tr><td><code>createPost(dto)</code></td><td>記事作成（下書き/公開）、カテゴリ・タグ・アイキャッチ指定可能</td></tr>
+        <tr><td><code>updatePost(id, dto)</code></td><td>既存記事の更新</td></tr>
+        <tr><td><code>deletePost(id)</code></td><td>記事の削除</td></tr>
+        <tr><td><code>getPost(id)</code></td><td>記事の取得</td></tr>
+        <tr><td><code>listPosts(params)</code></td><td>記事一覧（ページネーション・ステータスフィルタ対応）</td></tr>
+        <tr><td><code>listCategories()</code></td><td>カテゴリ一覧取得</td></tr>
+        <tr><td><code>listTags()</code></td><td>タグ一覧取得</td></tr>
+        <tr><td><code>uploadMedia(buffer, filename, mimeType)</code></td><td>メディア（画像）アップロード</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 6. データフロー                                 -->
+  <!-- ============================================ -->
+  <section id="data-flow">
+    <h2>6. データフロー</h2>
+    <p>ブログ記事生成の一連の処理フローです。</p>
+
+    <div class="flow-step">
+      <div class="num">1</div>
+      <div class="detail">
+        <strong>リクエスト受信</strong>
+        <p><code>POST /blog-generator/generate</code> にキーワード（必須）とトピック（任意）を送信</p>
+        <pre><code>{
+  "keywords": ["フルート", "タンポ交換", "やり方"],
+  "topic": "フルートのタンポ交換手順と注意点"
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="num">2</div>
+      <div class="detail">
+        <strong>Claude APIによる記事生成</strong>
+        <p>キーワードとトピックを含むプロンプトをClaude Sonnet 4に送信。JSON形式（title, content, excerpt）で結果を受け取ります。</p>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="num">3</div>
+      <div class="detail">
+        <strong>サムネイル画像生成</strong>
+        <p>生成されたタイトルを基に、Google Imagen 3.0で管楽器修理をモチーフにしたサムネイル画像を生成。PNG形式のBufferを取得。</p>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="num">4</div>
+      <div class="detail">
+        <strong>WordPress メディアアップロード</strong>
+        <p>生成した画像をWordPress REST APIでメディアライブラリにアップロードし、メディアIDを取得。</p>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="num">5</div>
+      <div class="detail">
+        <strong>WordPress 下書き投稿</strong>
+        <p>タイトル・本文HTML・抜粋・アイキャッチ画像IDを指定して、<code>status: 'draft'</code>で下書き記事を作成。</p>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="num">6</div>
+      <div class="detail">
+        <strong>レスポンス返却</strong>
+        <pre><code>{
+  "postId": 123,
+  "title": "フルートのタンポ交換...",
+  "excerpt": "記事の要約...",
+  "status": "draft",
+  "featuredMediaId": 456,
+  "link": "https://repairman.gakkiou.com/?p=123"
+}</code></pre>
+      </div>
+    </div>
+
+    <div class="note note-info">
+      画像生成に失敗した場合でも、記事の下書き作成はアイキャッチなしで続行されます（グレースフルデグラデーション）。
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 7. API仕様                                    -->
+  <!-- ============================================ -->
+  <section id="api-spec">
+    <h2>7. API仕様</h2>
+
+    <h3>7.1 ブログ生成 API</h3>
+    <div class="card">
+      <h4>POST /blog-generator/generate</h4>
+      <p>キーワードを基にブログ記事を自動生成し、WordPress下書きとして投稿</p>
+
+      <h4>リクエストボディ</h4>
+      <table>
+        <tr><th>フィールド</th><th>型</th><th>必須</th><th>説明</th></tr>
+        <tr><td><code>keywords</code></td><td>string[]</td><td>○</td><td>SEOキーワード（例: ["トランペット", "バルブオイル"]）</td></tr>
+        <tr><td><code>topic</code></td><td>string</td><td>-</td><td>記事のトピック・方向性を指定</td></tr>
+      </table>
+
+      <h4>レスポンス（200 OK）</h4>
+      <table>
+        <tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+        <tr><td><code>postId</code></td><td>number</td><td>WordPress上の投稿ID</td></tr>
+        <tr><td><code>title</code></td><td>string</td><td>生成された記事タイトル</td></tr>
+        <tr><td><code>excerpt</code></td><td>string</td><td>記事の要約（100文字以内）</td></tr>
+        <tr><td><code>status</code></td><td>string</td><td>"draft"</td></tr>
+        <tr><td><code>featuredMediaId</code></td><td>number | undefined</td><td>アイキャッチ画像のメディアID</td></tr>
+        <tr><td><code>link</code></td><td>string</td><td>WordPress上の記事URL</td></tr>
+      </table>
+    </div>
+
+    <h3>7.2 WordPress CRUD API</h3>
+    <table>
+      <tr><th>メソッド</th><th>エンドポイント</th><th>説明</th></tr>
+      <tr><td>POST</td><td><code>/wordpress/posts</code></td><td>記事を直接作成</td></tr>
+      <tr><td>GET</td><td><code>/wordpress/posts</code></td><td>記事一覧取得（?page, ?per_page, ?status）</td></tr>
+      <tr><td>GET</td><td><code>/wordpress/posts/:id</code></td><td>記事の詳細取得</td></tr>
+      <tr><td>PUT</td><td><code>/wordpress/posts/:id</code></td><td>記事の更新</td></tr>
+      <tr><td>DELETE</td><td><code>/wordpress/posts/:id</code></td><td>記事の削除</td></tr>
+      <tr><td>GET</td><td><code>/wordpress/categories</code></td><td>カテゴリ一覧取得</td></tr>
+      <tr><td>GET</td><td><code>/wordpress/tags</code></td><td>タグ一覧取得</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 8. プロンプト設計                               -->
+  <!-- ============================================ -->
+  <section id="prompt-design">
+    <h2>8. プロンプト設計</h2>
+
+    <h3>記事生成プロンプト（対象サイト向けカスタマイズ案）</h3>
+    <div class="card">
+      <p>現状のプロンプトは「高校吹奏楽部員向け」となっているため、対象サイトに合わせて以下のようにカスタマイズが必要です。</p>
+
+      <h4>現在のプロンプト（変更前）</h4>
+      <pre><code>あなたは高校生の吹奏楽部員に向けたブログライターです。
+読者は高校生の吹奏楽部員です。親しみやすく、共感できるトーンで書いてください。</code></pre>
+
+      <h4>提案プロンプト（変更後）</h4>
+      <pre><code>あなたは「管楽器リペアマン育成プロジェクト」のブログライターです。
+以下の検索キーワードをもとに、ブログ記事を1本書いてください。
+
+検索キーワード: ${keywordList}
+${topicLine}
+
+## ルール
+- 読者は管楽器修理に関心のある人（修理技術者志望者、現役リペアマン、
+  楽器演奏者、吹奏楽指導者）です
+- 専門的な内容でありながら、初学者にもわかりやすい表現を心がけてください
+- 修理の現場で実際に役立つ実践的な情報を含めてください
+- 上記のキーワードで検索するユーザーが求めている情報を網羅してください
+- キーワードを自然にタイトルと本文に含め、SEOを意識してください
+- 具体的な手順、工具名、注意点など実務に即した内容を記載してください
+- 1500〜2500文字程度で書いてください
+- 見出し（h2, h3）を使って読みやすく構成してください
+- 「現場で学び、現場で活きる」というサイトのコンセプトに沿ってください
+
+## 出力フォーマット
+以下のJSON形式で出力してください。JSON以外は出力しないでください。
+
+{
+  "title": "記事タイトル",
+  "content": "&lt;h2&gt;見出し&lt;/h2&gt;&lt;p&gt;本文...&lt;/p&gt;...",
+  "excerpt": "記事の要約（100文字以内）"
+}</code></pre>
+    </div>
+
+    <h3>プロンプト設計方針</h3>
+    <ul>
+      <li><strong>ペルソナ設定</strong>: 管楽器修理の専門家として、現場経験に基づいた記事を生成</li>
+      <li><strong>SEO最適化</strong>: 指定キーワードをタイトル・見出し・本文に自然に配置</li>
+      <li><strong>構造化</strong>: H2/H3見出しで論理的に構成し、WordPress上での可読性を確保</li>
+      <li><strong>文字数制御</strong>: 1500〜2500文字でSEOと可読性のバランスを維持</li>
+      <li><strong>出力形式</strong>: JSON（title, content, excerpt）で構造化し、パース容易に</li>
+    </ul>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 9. サムネイル画像生成                            -->
+  <!-- ============================================ -->
+  <section id="image-gen">
+    <h2>9. サムネイル画像生成</h2>
+    <div class="card">
+      <h3>使用モデル</h3>
+      <p>Google Generative AI — <strong>Imagen 3.0</strong>（imagen-3.0-generate-002）</p>
+
+      <h3>画像生成プロンプト（対象サイト向けカスタマイズ案）</h3>
+      <h4>現在のプロンプト（変更前）</h4>
+      <pre><code>A vibrant, warm illustration for a Japanese high school
+brass band blog post titled "${blogTitle}".
+Anime-inspired style, colorful, inviting atmosphere.</code></pre>
+
+      <h4>提案プロンプト（変更後）</h4>
+      <pre><code>A professional, warm illustration for a Japanese wind instrument
+repair and maintenance blog post titled "${blogTitle}".
+The image should feature brass/woodwind instrument parts, repair tools
+(pliers, screwdrivers, cork, pads), or a craftsman's workbench.
+Clean, professional style with warm lighting.
+No text in the image.</code></pre>
+
+      <h3>仕様</h3>
+      <table>
+        <tr><th>項目</th><th>内容</th></tr>
+        <tr><td>出力形式</td><td>PNG</td></tr>
+        <tr><td>生成枚数</td><td>1枚/リクエスト</td></tr>
+        <tr><td>ファイル名</td><td><code>thumbnail-{slug}-{timestamp}.png</code></td></tr>
+        <tr><td>アップロード先</td><td>WordPress メディアライブラリ</td></tr>
+        <tr><td>エラー時</td><td>画像なしで記事下書きを作成（ログに警告出力）</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 10. WordPress連携                              -->
+  <!-- ============================================ -->
+  <section id="wordpress">
+    <h2>10. WordPress連携</h2>
+
+    <h3>認証方式</h3>
+    <div class="card">
+      <ul>
+        <li><strong>方式</strong>: Basic認証（Application Password）</li>
+        <li><strong>ヘッダー</strong>: <code>Authorization: Basic {base64(username:app_password)}</code></li>
+        <li><strong>Base URL</strong>: <code>{WORDPRESS_URL}/wp-json/wp/v2</code></li>
+      </ul>
+      <div class="note">
+        WordPress管理画面の「ユーザー &gt; アプリケーションパスワード」から生成したパスワードを使用します。
+        通常のログインパスワードではありません。
+      </div>
+    </div>
+
+    <h3>記事投稿フロー</h3>
+    <table>
+      <tr><th>ステップ</th><th>API</th><th>概要</th></tr>
+      <tr><td>1</td><td>POST /wp-json/wp/v2/media</td><td>サムネイル画像をアップロード → メディアID取得</td></tr>
+      <tr><td>2</td><td>POST /wp-json/wp/v2/posts</td><td>記事を下書き投稿（title, content, excerpt, featured_media, status=draft）</td></tr>
+    </table>
+
+    <h3>Swellテーマ対応</h3>
+    <p>対象サイトはWordPress Swellテーマを使用しています。生成するHTMLは以下に留意します。</p>
+    <ul>
+      <li>Swellのブロックエディタ（Gutenberg）との互換性を持つ標準的なHTMLタグを使用</li>
+      <li>H2/H3の見出し構造はSwellの目次自動生成機能と連動</li>
+      <li>記事のexcerptはSwellのブログカード表示に利用される</li>
+    </ul>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 11. 環境変数・設定                               -->
+  <!-- ============================================ -->
+  <section id="env">
+    <h2>11. 環境変数・設定</h2>
+    <table>
+      <tr><th>変数名</th><th>必須</th><th>説明</th><th>例</th></tr>
+      <tr><td><code>WORDPRESS_URL</code></td><td>○</td><td>WordPressサイトのベースURL</td><td>https://repairman.gakkiou.com</td></tr>
+      <tr><td><code>WORDPRESS_USERNAME</code></td><td>○</td><td>WordPress管理者ユーザー名</td><td>admin</td></tr>
+      <tr><td><code>WORDPRESS_APP_PASSWORD</code></td><td>○</td><td>アプリケーションパスワード</td><td>xxxx xxxx xxxx xxxx</td></tr>
+      <tr><td><code>ANTHROPIC_API_KEY</code></td><td>○</td><td>Anthropic Claude APIキー</td><td>sk-ant-xxxxx</td></tr>
+      <tr><td><code>GEMINI_API_KEY</code></td><td>○</td><td>Google Generative AI APIキー</td><td>AIza...</td></tr>
+      <tr><td><code>PORT</code></td><td>-</td><td>サーバーポート（デフォルト: 3100）</td><td>3100</td></tr>
+    </table>
+
+    <h3>コマンド一覧</h3>
+    <table>
+      <tr><th>コマンド</th><th>説明</th></tr>
+      <tr><td><code>npm run start:dev</code></td><td>開発サーバー起動（ホットリロード）</td></tr>
+      <tr><td><code>npm run build</code></td><td>プロダクションビルド</td></tr>
+      <tr><td><code>npm run start:prod</code></td><td>プロダクション実行</td></tr>
+      <tr><td><code>npm run test</code></td><td>ユニットテスト実行</td></tr>
+      <tr><td><code>npm run lint</code></td><td>ESLintによるコード検査</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 12. ディレクトリ構成                             -->
+  <!-- ============================================ -->
+  <section id="directory">
+    <h2>12. ディレクトリ構成</h2>
+    <pre><code>blog-auto/
+├── .env                              # 環境変数（git管理外）
+├── .env.example                      # 環境変数テンプレート
+├── package.json                      # 依存関係・スクリプト
+├── nest-cli.json                     # NestJS CLI設定
+├── tsconfig.json                     # TypeScript設定
+├── tsconfig.build.json               # ビルド用TS設定
+│
+├── public/
+│   ├── index.html                    # 静的トップページ
+│   └── specification.html            # 本仕様設計書
+│
+├── src/
+│   ├── main.ts                       # アプリケーションエントリ
+│   ├── app.module.ts                 # ルートモジュール
+│   ├── app.controller.ts             # ヘルスチェック
+│   ├── app.service.ts                # ルートサービス
+│   │
+│   ├── blog-generator/               # ブログ生成モジュール
+│   │   ├── blog-generator.module.ts
+│   │   ├── blog-generator.controller.ts
+│   │   ├── blog-generator.service.ts  # ★ コア: 生成パイプライン
+│   │   ├── blog-generator.dto.ts
+│   │   └── image-generator.service.ts # サムネイル画像生成
+│   │
+│   └── wordpress/                    # WordPress連携モジュール
+│       ├── wordpress.module.ts
+│       ├── wordpress.controller.ts
+│       ├── wordpress.service.ts       # WordPress REST APIクライアント
+│       └── wordpress.dto.ts
+│
+└── test/
+    └── jest-e2e.json                 # E2Eテスト設定</code></pre>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 13. エラーハンドリング                            -->
+  <!-- ============================================ -->
+  <section id="error-handling">
+    <h2>13. エラーハンドリング</h2>
+    <table>
+      <tr><th>発生箇所</th><th>エラー内容</th><th>対応</th></tr>
+      <tr><td>Claude API</td><td>APIレスポンスからJSONパース失敗</td><td>Error throw（記事生成不可のため処理中断）</td></tr>
+      <tr><td>Claude API</td><td>API呼び出しエラー（レート制限等）</td><td>NestJS例外として上位に伝播</td></tr>
+      <tr><td>Imagen 3.0</td><td>画像生成失敗</td><td>警告ログを出力し、アイキャッチなしで記事作成を続行</td></tr>
+      <tr><td>WordPress API</td><td>メディアアップロード失敗</td><td>画像生成失敗と同様、記事作成を続行</td></tr>
+      <tr><td>WordPress API</td><td>記事投稿失敗（認証エラー等）</td><td>Error throw（処理中断）</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- 14. 拡張計画                                    -->
+  <!-- ============================================ -->
+  <section id="future">
+    <h2>14. 拡張計画（検討事項）</h2>
+    <table>
+      <tr><th>機能</th><th>概要</th><th>ステータス</th></tr>
+      <tr>
+        <td>プロンプトのサイト特化</td>
+        <td>「管楽器リペアマン育成」向けにプロンプト・画像生成を最適化</td>
+        <td><span class="badge badge-todo">対応予定</span></td>
+      </tr>
+      <tr>
+        <td>カテゴリ自動割り当て</td>
+        <td>キーワードに基づき、WordPress上のカテゴリを自動選択</td>
+        <td><span class="badge badge-plan">検討中</span></td>
+      </tr>
+      <tr>
+        <td>タグ自動生成</td>
+        <td>記事内容からタグを自動抽出し、WordPress上に反映</td>
+        <td><span class="badge badge-plan">検討中</span></td>
+      </tr>
+      <tr>
+        <td>バッチ生成</td>
+        <td>複数キーワードセットを一括で記事生成</td>
+        <td><span class="badge badge-plan">検討中</span></td>
+      </tr>
+      <tr>
+        <td>スケジュール投稿</td>
+        <td>Cronで定期的にブログ記事を生成・投稿</td>
+        <td><span class="badge badge-plan">検討中</span></td>
+      </tr>
+      <tr>
+        <td>生成記事のプレビュー</td>
+        <td>投稿前にフロントエンドでプレビュー確認する機能</td>
+        <td><span class="badge badge-plan">検討中</span></td>
+      </tr>
+      <tr>
+        <td>テスト拡充</td>
+        <td>BlogGeneratorService / WordpressService のユニット・E2Eテスト追加</td>
+        <td><span class="badge badge-plan">検討中</span></td>
+      </tr>
+    </table>
+  </section>
+
+</div>
+
+<footer>
+  <p>blog-auto 仕様設計書 v1.0 — 管楽器リペアマン育成プロジェクト ブログ自動生成システム</p>
+  <p>Generated: 2026-04-22</p>
+</footer>
+
+</body>
+</html>
