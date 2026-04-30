@@ -24,10 +24,11 @@ interface GeneratedBlog {
 }
 
 const MAX_TOKENS: Record<ArticleType, number> = {
-  [ArticleType.SEO]: 8192,
-  [ArticleType.REPAIR_REPORT]: 12288,
-  [ArticleType.QA]: 8192,
-  [ArticleType.RANKING]: 10240,
+  // 1800〜2200文字程度を狙うため、過剰生成を抑える
+  [ArticleType.SEO]: 6400,
+  [ArticleType.REPAIR_REPORT]: 7200,
+  [ArticleType.QA]: 6400,
+  [ArticleType.RANKING]: 6800,
 };
 
 @Injectable()
