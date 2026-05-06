@@ -1,10 +1,9 @@
 FROM node:20  AS builder
 WORKDIR /line-reservation-api
-COPY ./api/package*.json /line-reservation-api/
-COPY ./api/yarn.lock /line-reservation-api/
-RUN yarn
-COPY ./api /line-reservation-api/
-RUN yarn build
+COPY ./package*.json /line-reservation-api/
+RUN npm ci
+COPY . /line-reservation-api/
+RUN npm run build
 
 # for ncc
 
@@ -12,7 +11,7 @@ RUN yarn build
 # WORKDIR /eo-api-v2
 # COPY --from=builder /eo-api-v2/dist ./
 # COPY --from=builder /eo-api-v2/package.json ./
-# RUN yarn add typeorm@0.2.43
+# RUN npm install typeorm@0.2.43
 
-# CMD ["yarn", "start:prod-new"]
-CMD ["yarn", "start:prod"]
+# CMD ["npm", "run", "start:prod-new"]
+CMD ["npm", "run", "start:prod"]
