@@ -1,6 +1,6 @@
 export class CreatePostDto {
-  title: string;
-  content: string;
+  title!: string;
+  content!: string;
   status?: 'publish' | 'draft' | 'pending' | 'private';
   categories?: number[];
   tags?: number[];

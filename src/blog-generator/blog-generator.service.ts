@@ -70,10 +70,7 @@ export class BlogGeneratorService {
     );
 
     // 3. 画像をWordPressにアップロード
-    const uploadedImages = await this.uploadAllImages(
-      blog.title,
-      imageResults,
-    );
+    const uploadedImages = await this.uploadAllImages(blog.title, imageResults);
 
     // 4. 本文中のプレースホルダーを画像タグに置換
     let content = blog.content;
@@ -92,8 +89,7 @@ export class BlogGeneratorService {
     }
 
     // 5. カテゴリ・タグのID解決
-    const categoryNames =
-      dto.categoryNames ?? blog.suggestedCategories ?? [];
+    const categoryNames = dto.categoryNames ?? blog.suggestedCategories ?? [];
     const tagNames = dto.tagNames ?? blog.suggestedTags ?? [];
 
     const [categoryIds, tagIds] = await Promise.all([
@@ -233,14 +229,14 @@ export class BlogGeneratorService {
           return null;
         }),
       ...sectionImageDefs.map((def, i) =>
-        this.imageGeneratorService.generateSectionImage(def.prompt).catch(
-          (err) => {
+        this.imageGeneratorService
+          .generateSectionImage(def.prompt)
+          .catch((err) => {
             this.logger.warn(
               `Section image ${i} generation failed: ${err.message}`,
             );
             return null;
-          },
-        ),
+          }),
       ),
     ];
 
@@ -260,7 +256,9 @@ export class BlogGeneratorService {
     thumbnailId: number | undefined;
     sections: { id: number; url: string }[];
   }> {
-    const slug = (title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || 'blog').substring(0, 50);
+    const slug = (
+      title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || 'blog'
+    ).substring(0, 50);
     let thumbnailId: number | undefined;
 
     // サムネイルアップロード
@@ -273,7 +271,9 @@ export class BlogGeneratorService {
           'image/png',
         );
         thumbnailId = media.id;
-        this.logger.log(`Thumbnail uploaded: mediaId=${media.id}, url=${media.source_url}`);
+        this.logger.log(
+          `Thumbnail uploaded: mediaId=${media.id}, url=${media.source_url}`,
+        );
       } catch (err) {
         this.logger.warn(`Thumbnail upload failed: ${err.message}`);
       }
@@ -292,7 +292,9 @@ export class BlogGeneratorService {
           'image/png',
         );
         sections.push({ id: media.id, url: media.source_url });
-        this.logger.log(`Section image ${i} uploaded: mediaId=${media.id}, url=${media.source_url}`);
+        this.logger.log(
+          `Section image ${i} uploaded: mediaId=${media.id}, url=${media.source_url}`,
+        );
       } catch (err) {
         this.logger.warn(`Section image ${i} upload failed: ${err.message}`);
       }

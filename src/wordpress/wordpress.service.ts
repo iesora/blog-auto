@@ -38,7 +38,9 @@ export class WordpressService {
       slug: dto.slug,
     });
 
-    this.logger.log(`Post created: id=${data.id}, title="${data.title.rendered}"`);
+    this.logger.log(
+      `Post created: id=${data.id}, title="${data.title.rendered}"`,
+    );
     return data;
   }
 
@@ -61,7 +63,11 @@ export class WordpressService {
     return data;
   }
 
-  async listPosts(params?: { page?: number; per_page?: number; status?: string }) {
+  async listPosts(params?: {
+    page?: number;
+    per_page?: number;
+    status?: string;
+  }) {
     const { data } = await this.client.get('/posts', { params });
     return data;
   }

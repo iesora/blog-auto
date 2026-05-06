@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ブログ自動投稿スケジュール</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding: 40px 20px;
+      color: #333;
+    }
+    .nav { max-width: 880px; margin: 0 auto 16px; font-size: 0.85rem; }
+    .nav a { color: #4a90d9; text-decoration: none; }
+    .page {
+      max-width: 880px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .header h1 { font-size: 1.5rem; }
+    .header .subtitle {
+      color: #888;
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+    button {
+      padding: 12px 20px;
+      background: #4a90d9;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    button:hover { background: #3a7bc8; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    button.ghost {
+      background: #fff;
+      color: #4a90d9;
+      border: 1px solid #4a90d9;
+    }
+    button.ghost:hover { background: #f0f6fc; }
+    button.danger { background: #d96a6a; }
+    button.danger:hover { background: #c25555; }
+    button.small { padding: 6px 12px; font-size: 0.8rem; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 14px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e8b57; color: #fff; }
+    .toast.error { background: #d96a6a; color: #fff; }
+
+    /* List */
+    .list { display: grid; gap: 12px; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      padding: 20px 24px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 24px;
+      align-items: center;
+      transition: box-shadow 0.2s, transform 0.1s;
+    }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .date-block {
+      text-align: center;
+      min-width: 64px;
+      padding-right: 24px;
+      border-right: 1px solid #eee;
+    }
+    .date-month {
+      font-size: 0.75rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .date-day {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #333;
+      line-height: 1;
+      margin: 4px 0;
+    }
+    .date-year {
+      font-size: 0.75rem;
+      color: #888;
+    }
+    .date-weekday {
+      font-size: 0.7rem;
+      color: #aaa;
+      margin-top: 4px;
+    }
+    .date-block.past .date-day { color: #bbb; }
+    .date-block.today .date-day { color: #d96a3a; }
+
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      background: #f0f6fc;
+      color: #2c5d8a;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem;
+      color: #888;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .badge.pending { background: #f0f0f0; color: #888; }
+    .badge.success { background: #e6f4ea; color: #2e7d4f; }
+    .badge.failed { background: #fdeaea; color: #b03a3a; }
+    .status-row a {
+      color: #4a90d9;
+      text-decoration: none;
+    }
+    .status-row a:hover { text-decoration: underline; }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      align-self: center;
+    }
+    .card.run-success { border-left: 3px solid #2e8b57; }
+    .card.run-failed { border-left: 3px solid #d96a6a; }
+
+    .empty {
+      background: #fff;
+      border-radius: 12px;
+      padding: 60px 24px;
+      text-align: center;
+      color: #aaa;
+      font-size: 0.95rem;
+    }
+    .empty .empty-icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 480px;
+      padding: 32px;
+      animation: modalIn 0.18s ease-out;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .modal h2 {
+      font-size: 1.2rem;
+      margin-bottom: 4px;
+    }
+    .modal .modal-subtitle {
+      color: #888;
+      font-size: 0.85rem;
+      margin-bottom: 24px;
+    }
+    .field { margin-bottom: 16px; }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    input[type="text"],
+    input[type="date"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    input:focus { border-color: #4a90d9; }
+    .modal-footer {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+    .modal-footer button { flex: 0 0 auto; }
+
+    @media (max-width: 600px) {
+      .card {
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+      }
+      .card-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+      }
+      .date-block { padding-right: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav"><a href="/index.html">← 即時生成へ戻る</a></div>
+
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>スケジュール一覧</h1>
+        <p class="subtitle">日付ごとのキーワードを登録すると、その日に自動でブログ記事が下書き投稿されます。</p>
+      </div>
+      <button id="openModalBtn">＋ 新規登録</button>
+    </div>
+
+    <div id="listArea" class="list">
+      <div class="empty">読み込み中...</div>
+    </div>
+  </div>
+
+  <!-- 登録モーダル -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" role="dialog" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">スケジュール登録</h2>
+      <p class="modal-subtitle">日付と3つのキーワードを設定してください。</p>
+      <form id="scheduleForm">
+        <div class="field">
+          <label for="date">日付</label>
+          <input type="date" id="date" required>
+        </div>
+        <div class="field">
+          <label for="keyword1">キーワード 1</label>
+          <input type="text" id="keyword1" placeholder="例: 吹奏楽 コンクール" required>
+        </div>
+        <div class="field">
+          <label for="keyword2">キーワード 2</label>
+          <input type="text" id="keyword2" placeholder="例: 練習方法" required>
+        </div>
+        <div class="field">
+          <label for="keyword3">キーワード 3</label>
+          <input type="text" id="keyword3" placeholder="例: 初心者 上達" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="ghost" id="cancelBtn">キャンセル</button>
+          <button type="submit" id="submitBtn">登録する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const openModalBtn = document.getElementById('openModalBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const form = document.getElementById('scheduleForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const listArea = document.getElementById('listArea');
+    const toast = document.getElementById('toast');
+    const modalTitle = document.getElementById('modalTitle');
+    const dateInput = document.getElementById('date');
+
+    const WEEKDAY_JA = ['日', '月', '火', '水', '木', '金', '土'];
+    const MONTH_LABEL = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+    let editingDate = null;
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      })[c]);
+    }
+
+    function todayStr() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function classifyDate(dateStr) {
+      const today = todayStr();
+      if (dateStr < today) return 'past';
+      if (dateStr === today) return 'today';
+      return 'future';
+    }
+
+    function formatRanAt(iso) {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      return `${y}/${m}/${day} ${hh}:${mm}`;
+    }
+
+    function renderRunStatus(lastRun) {
+      if (!lastRun) {
+        return '<span class="badge pending">未実行</span>';
+      }
+      if (lastRun.status === 'success') {
+        const link = lastRun.postLink
+          ? `<a href="${escapeHtml(lastRun.postLink)}" target="_blank" rel="noopener">投稿を開く →</a>`
+          : '';
+        const title = lastRun.postTitle ? `「${escapeHtml(lastRun.postTitle)}」` : '';
+        return `
+          <span class="badge success">実行済み</span>
+          <span>${escapeHtml(formatRanAt(lastRun.ranAt))}</span>
+          ${title ? `<span>${title}</span>` : ''}
+          ${link}
+        `;
+      }
+      return `
+        <span class="badge failed">失敗</span>
+        <span>${escapeHtml(formatRanAt(lastRun.ranAt))}</span>
+        ${lastRun.error ? `<span title="${escapeHtml(lastRun.error)}">${escapeHtml(lastRun.error.slice(0, 80))}</span>` : ''}
+      `;
+    }
+
+    function showToast(msg, ok) {
+      toast.textContent = msg;
+      toast.className = 'toast show ' + (ok ? 'success' : 'error');
+      setTimeout(() => { toast.className = 'toast'; }, 2400);
+    }
+
+    function openModal(entry) {
+      editingDate = entry?.date ?? null;
+      modalTitle.textContent = entry ? 'スケジュール編集' : 'スケジュール登録';
+      dateInput.value = entry?.date ?? '';
+      dateInput.disabled = !!entry;
+      document.getElementById('keyword1').value = entry?.keywords?.[0] ?? '';
+      document.getElementById('keyword2').value = entry?.keywords?.[1] ?? '';
+      document.getElementById('keyword3').value = entry?.keywords?.[2] ?? '';
+      modalBackdrop.classList.add('show');
+      setTimeout(() => {
+        (entry ? document.getElementById('keyword1') : dateInput).focus();
+      }, 50);
+    }
+
+    function closeModal() {
+      modalBackdrop.classList.remove('show');
+      form.reset();
+      dateInput.disabled = false;
+      editingDate = null;
+    }
+
+    openModalBtn.addEventListener('click', () => openModal());
+    cancelBtn.addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modalBackdrop.classList.contains('show')) closeModal();
+    });
+
+    async function loadList() {
+      try {
+        const res = await fetch('/schedules');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const items = await res.json();
+        renderList(items);
+      } catch (err) {
+        listArea.innerHTML = `<div class="empty">読み込みに失敗しました: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderList(items) {
+      if (!items.length) {
+        listArea.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">📅</div>
+            まだスケジュールがありません。<br>右上の「＋ 新規登録」から追加してください。
+          </div>
+        `;
+        return;
+      }
+
+      listArea.innerHTML = items.map((it) => {
+        const [y, m, d] = it.date.split('-').map(Number);
+        const dt = new Date(y, m-1, d);
+        const cls = classifyDate(it.date);
+        const weekday = WEEKDAY_JA[dt.getDay()];
+        const monthLabel = MONTH_LABEL[m-1];
+        const runHtml = renderRunStatus(it.lastRun);
+        const runClass = it.lastRun
+          ? (it.lastRun.status === 'success' ? 'run-success' : 'run-failed')
+          : '';
+        const runLabel = it.lastRun?.status === 'success' ? '再実行' : '今すぐ実行';
+        return `
+          <div class="card ${runClass}" data-date="${escapeHtml(it.date)}">
+            <div class="date-block ${cls}">
+              <div class="date-month">${monthLabel}</div>
+              <div class="date-day">${d}</div>
+              <div class="date-year">${y}</div>
+              <div class="date-weekday">${weekday}曜日</div>
+            </div>
+            <div class="card-body">
+              <div class="keywords">
+                ${it.keywords.map((k) => `<span class="chip">${escapeHtml(k)}</span>`).join('')}
+              </div>
+              <div class="status-row">${runHtml}</div>
+            </div>
+            <div class="card-actions">
+              <button class="ghost small" data-action="edit">編集</button>
+              <button class="ghost small" data-action="run">${runLabel}</button>
+              <button class="danger small" data-action="delete">削除</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      listArea.querySelectorAll('button[data-action]').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          const card = e.currentTarget.closest('.card');
+          const date = card.dataset.date;
+          const action = e.currentTarget.dataset.action;
+          if (action === 'delete') {
+            if (!confirm(`${date} のスケジュールを削除しますか？`)) return;
+            await deleteEntry(date);
+          } else if (action === 'run') {
+            await runEntry(date, e.currentTarget);
+          } else if (action === 'edit') {
+            const entry = items.find((x) => x.date === date);
+            if (entry) openModal(entry);
+          }
+        });
+      });
+    }
+
+    async function deleteEntry(date) {
+      try {
+        const res = await fetch(`/schedules/${date}`, { method: 'DELETE' });
+        if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+        showToast(`${date} を削除しました`, true);
+        loadList();
+      } catch (err) {
+        showToast(`削除に失敗しました: ${err.message}`, false);
+      }
+    }
+
+    async function runEntry(date, btn) {
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '実行中...';
+      try {
+        const res = await fetch(`/schedules/run/${date}`, { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (data.skipped) {
+          showToast(`${date} のスケジュールが見つかりません`, false);
+        } else {
+          showToast(`${date} の記事を生成しました（postId=${data.result?.postId ?? '-'}）`, true);
+        }
+      } catch (err) {
+        showToast(`実行に失敗しました: ${err.message}`, false);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const date = dateInput.value;
+      const keywords = [
+        document.getElementById('keyword1').value.trim(),
+        document.getElementById('keyword2').value.trim(),
+        document.getElementById('keyword3').value.trim(),
+      ];
+      if (!date || keywords.some((k) => !k)) return;
+
+      submitBtn.disabled = true;
+      const isEditing = !!editingDate;
+      submitBtn.textContent = isEditing ? '更新中...' : '登録中...';
+      try {
+        const res = await fetch('/schedules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date, keywords }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || `HTTP ${res.status}`);
+        }
+        showToast(`${date} を${isEditing ? '更新' : '登録'}しました`, true);
+        closeModal();
+        loadList();
+      } catch (err) {
+        showToast(`${isEditing ? '更新' : '登録'}に失敗しました: ${err.message}`, false);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '登録する';
+      }
+    });
+
+    loadList();
+  </script>
+</body>
+</html>

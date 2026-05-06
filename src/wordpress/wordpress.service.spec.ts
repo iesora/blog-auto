@@ -61,7 +61,11 @@ describe('WordpressService', () => {
   describe('createPost', () => {
     it('投稿を作成してレスポンスを返す', async () => {
       const mockResponse = {
-        data: { id: 123, title: { rendered: 'Test' }, link: 'https://example.com/test' },
+        data: {
+          id: 123,
+          title: { rendered: 'Test' },
+          link: 'https://example.com/test',
+        },
       };
       mockClient.post.mockResolvedValue(mockResponse);
 

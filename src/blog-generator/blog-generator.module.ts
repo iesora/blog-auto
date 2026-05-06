@@ -8,5 +8,6 @@ import { WordpressModule } from '../wordpress/wordpress.module';
   imports: [WordpressModule],
   controllers: [BlogGeneratorController],
   providers: [BlogGeneratorService, ImageGeneratorService],
+  exports: [BlogGeneratorService],
 })
 export class BlogGeneratorModule {}

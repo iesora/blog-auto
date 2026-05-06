@@ -6,7 +6,7 @@ export enum ArticleType {
 }
 
 export class GenerateBlogDto {
-  keywords: string[];
+  keywords!: string[];
   topic?: string;
   articleType?: ArticleType;
   categoryNames?: string[];
