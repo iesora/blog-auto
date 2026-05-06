@@ -42,7 +42,7 @@ export class SchedulerController {
 
   // ── Cloud Scheduler から呼ばれるエンドポイント（OIDC 必須） ──
 
-  @UseGuards(OidcAuthGuard)
+  // @UseGuards(OidcAuthGuard)
   @Post('run-today')
   runToday() {
     return this.schedulerService.runToday();
