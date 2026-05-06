@@ -31,21 +31,27 @@ type Header = (typeof HEADERS)[number];
 @Injectable()
 export class SchedulerStorageService {
   private readonly logger = new Logger(SchedulerStorageService.name);
-  private readonly storage: Storage;
-  private readonly bucketName: string;
-  private readonly objectKey: string;
+  private storage?: Storage;
+  private bucketName?: string;
+  private objectKey?: string;
 
-  constructor(private readonly configService: ConfigService) {
-    const bucket = this.configService.get<string>('GCS_BUCKET');
-    if (!bucket) {
-      throw new InternalServerErrorException(
-        'GCS_BUCKET environment variable is required',
-      );
+  constructor(private readonly configService: ConfigService) {}
+
+  // GCS バケット名を取得時に解決する（未設定なら例外を投げる）
+  private file() {
+    if (!this.storage) {
+      const bucket = this.configService.get<string>('GCS_BUCKET');
+      if (!bucket) {
+        throw new InternalServerErrorException(
+          'GCS_BUCKET environment variable is required',
+        );
+      }
+      this.bucketName = bucket;
+      this.objectKey =
+        this.configService.get<string>('GCS_SCHEDULE_KEY') ?? 'schedules.xlsx';
+      this.storage = new Storage();
     }
-    this.bucketName = bucket;
-    this.objectKey =
-      this.configService.get<string>('GCS_SCHEDULE_KEY') ?? 'schedules.xlsx';
-    this.storage = new Storage();
+    return this.storage.bucket(this.bucketName!).file(this.objectKey!);
   }
 
   // ── Public API ──
@@ -97,10 +103,6 @@ export class SchedulerStorageService {
   }
 
   // ── GCS I/O ──
-
-  private file() {
-    return this.storage.bucket(this.bucketName).file(this.objectKey);
-  }
 
   private async loadWorkbook(): Promise<ExcelJS.Workbook> {
     const wb = new ExcelJS.Workbook();
