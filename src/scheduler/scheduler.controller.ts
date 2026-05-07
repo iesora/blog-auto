@@ -48,7 +48,7 @@ export class SchedulerController {
     return this.schedulerService.runToday();
   }
 
-  @UseGuards(OidcAuthGuard)
+  // @UseGuards(OidcAuthGuard)
   @Post('run/:date')
   runForDate(@Param('date') date: string) {
     return this.schedulerService.runForDate(date);
