@@ -642,6 +642,11 @@ No text in the image.</code></pre>
       <tr><td>2</td><td>POST /wp-json/wp/v2/posts</td><td>記事を下書き投稿（title, content, excerpt, featured_media, status=draft）</td></tr>
     </table>
 
+    <h3>スケジュール一覧画面（{ドメイン}/）の注意事項</h3>
+    <div class="note">
+      「投稿を開く」リンクからWordPress上の下書き記事を確認する場合、WordPressにログインしていない状態では404ページが表示されます。下書き（draft）記事は認証済みユーザーにのみ表示されるWordPressの仕様によるものです。
+    </div>
+
     <h3>Swellテーマ対応</h3>
     <p>対象サイトはWordPress Swellテーマを使用しています。生成するHTMLは以下に留意します。</p>
     <ul>
