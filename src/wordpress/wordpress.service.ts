@@ -1,24 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
+import { Site } from '../entities';
+import { SitesService } from '../sites/sites.service';
 import { CreatePostDto, UpdatePostDto } from './wordpress.dto';
 
-@Injectable()
-export class WordpressService {
-  private readonly logger = new Logger(WordpressService.name);
+/**
+ * 1サイトに紐づく WordPress REST クライアント。
+ * 認証情報は復号した状態で保持する。利用が終わったら参照を破棄する想定。
+ */
+export class WordpressClient {
+  private readonly logger = new Logger(WordpressClient.name);
   private readonly client: AxiosInstance;
 
-  constructor(private readonly configService: ConfigService) {
-    const baseURL = this.configService.get<string>('WORDPRESS_URL');
-    const username = this.configService.get<string>('WORDPRESS_USERNAME');
-    const appPassword = this.configService.get<string>(
-      'WORDPRESS_APP_PASSWORD',
-    );
-
-    const token = Buffer.from(`${username}:${appPassword}`).toString('base64');
+  constructor(
+    public readonly site: Site,
+    appPasswordPlain: string,
+  ) {
+    const token = Buffer.from(
+      `${site.wpUsername}:${appPasswordPlain}`,
+    ).toString('base64');
 
     this.client = axios.create({
-      baseURL: `${baseURL}/wp-json/wp/v2`,
+      baseURL: `${site.wpUrl.replace(/\/+$/, '')}/wp-json/wp/v2`,
       headers: {
         Authorization: `Basic ${token}`,
         'Content-Type': 'application/json',
@@ -37,24 +40,21 @@ export class WordpressService {
       excerpt: dto.excerpt,
       slug: dto.slug,
     });
-
     this.logger.log(
-      `Post created: id=${data.id}, title="${data.title.rendered}"`,
+      `[${this.site.slug}] post created: id=${data.id}, title="${data.title.rendered}"`,
     );
     return data;
   }
 
   async updatePost(id: number, dto: UpdatePostDto) {
     const { data } = await this.client.put(`/posts/${id}`, dto);
-
-    this.logger.log(`Post updated: id=${data.id}`);
+    this.logger.log(`[${this.site.slug}] post updated: id=${data.id}`);
     return data;
   }
 
   async deletePost(id: number) {
     const { data } = await this.client.delete(`/posts/${id}`);
-
-    this.logger.log(`Post deleted: id=${id}`);
+    this.logger.log(`[${this.site.slug}] post deleted: id=${id}`);
     return data;
   }
 
@@ -97,8 +97,25 @@ export class WordpressService {
         'Content-Disposition': `attachment; filename="${filename}"`,
       },
     });
-
-    this.logger.log(`Media uploaded: id=${data.id}, url="${data.source_url}"`);
+    this.logger.log(
+      `[${this.site.slug}] media uploaded: id=${data.id}, url="${data.source_url}"`,
+    );
     return data;
+  }
+}
+
+@Injectable()
+export class WordpressService {
+  constructor(private readonly sitesService: SitesService) {}
+
+  /** Site を渡してクライアントを生成する。 */
+  forSite(site: Site): WordpressClient {
+    const password = this.sitesService.decryptWpAppPassword(site);
+    return new WordpressClient(site, password);
+  }
+
+  async forSlug(slug: string): Promise<WordpressClient> {
+    const site = await this.sitesService.findBySlug(slug);
+    return this.forSite(site);
   }
 }

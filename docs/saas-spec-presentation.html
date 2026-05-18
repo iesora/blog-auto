@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blog Auto 開発提案書 — WordPress自動投稿SaaSを、貴社のために構築します。</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --primary-light: #60a5fa;
+    --accent: #f59e0b;
+    --accent-2: #fbbf24;
+    --bg: #ffffff;
+    --bg-soft: #f8fafc;
+    --bg-dark: #0f172a;
+    --text: #0f172a;
+    --text-soft: #334155;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; display: block; }
+
+  /* Nav */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+  }
+  .logo .dot { color: var(--primary); }
+  .nav-links {
+    display: flex;
+    gap: 28px;
+    font-size: 14px;
+    color: var(--text-soft);
+  }
+  .nav-links a:hover { color: var(--primary); }
+  .nav-cta {
+    background: var(--primary);
+    color: white;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+  .nav-cta:hover { background: var(--primary-dark); }
+
+  /* Hero */
+  .hero {
+    padding: 140px 32px 120px;
+    background:
+      radial-gradient(circle at 80% 10%, rgba(96,165,250,0.18), transparent 50%),
+      radial-gradient(circle at 10% 90%, rgba(251,191,36,0.12), transparent 50%),
+      linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-inner { max-width: 920px; margin: 0 auto; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    color: var(--text-soft);
+    margin-bottom: 28px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .badge .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 3px rgba(22,163,74,0.2);
+  }
+  .hero h1 {
+    font-size: 60px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    margin-bottom: 24px;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p.lead {
+    font-size: 20px;
+    color: var(--text-soft);
+    max-width: 720px;
+    margin: 0 auto 40px;
+    line-height: 1.6;
+  }
+  .hero-cta {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.15s;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+  }
+  .btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(37,99,235,0.35);
+  }
+  .btn-ghost {
+    background: white;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+  .hero-meta {
+    margin-top: 28px;
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    font-size: 13px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+  .hero-meta span::before { content: "✓ "; color: var(--success); font-weight: 700; }
+
+  /* Hero visual */
+  .hero-visual {
+    margin: 64px auto 0;
+    max-width: 900px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(15,23,42,0.12);
+    overflow: hidden;
+  }
+  .hero-visual .topbar {
+    background: var(--bg-soft);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .hero-visual .topbar span {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: #cbd5e1;
+  }
+  .hero-visual .topbar span:nth-child(1) { background: #ef4444; }
+  .hero-visual .topbar span:nth-child(2) { background: #f59e0b; }
+  .hero-visual .topbar span:nth-child(3) { background: #22c55e; }
+  .hero-visual .topbar .addr {
+    margin-left: 16px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: monospace;
+  }
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    min-height: 360px;
+  }
+  .dash-side {
+    background: var(--bg-soft);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px;
+  }
+  .dash-side .item {
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    color: var(--text-soft);
+    margin-bottom: 2px;
+  }
+  .dash-side .item.active { background: white; color: var(--primary); font-weight: 600; }
+  .dash-main { padding: 24px 28px; text-align: left; }
+  .dash-main h4 { font-size: 18px; margin-bottom: 16px; }
+  .dash-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .dash-stat {
+    background: var(--bg-soft);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .dash-stat .num { font-size: 22px; font-weight: 700; color: var(--primary-dark); }
+  .dash-stat .lab { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .dash-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dash-row:last-child { border-bottom: none; }
+  .dash-row .status {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--success);
+  }
+  .dash-row .status.warn { background: var(--warning); }
+  .dash-row .status.run { background: var(--primary); animation: pulse 1.5s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .dash-row .title { flex: 1; }
+  .dash-row .time { color: var(--muted); font-size: 12px; }
+
+  /* Section common */
+  section { padding: 100px 32px; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .section-header { text-align: center; margin-bottom: 60px; }
+  .section-tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .section-header h2 {
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+  .section-header h2 .grad {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .section-header p {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  /* Problem section */
+  .problem { background: var(--bg-soft); }
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .problem-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px 28px;
+    transition: all 0.2s;
+  }
+  .problem-card:hover { border-color: var(--primary-light); transform: translateY(-2px); box-shadow: 0 12px 24px rgba(15,23,42,0.06); }
+  .problem-icon {
+    width: 48px; height: 48px;
+    border-radius: 10px;
+    background: #fef3c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 18px;
+  }
+  .problem-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .problem-card p { font-size: 15px; color: var(--text-soft); line-height: 1.65; }
+
+  /* Features */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .feature-card {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px 28px;
+    background: white;
+    transition: all 0.2s;
+  }
+  .feature-card:hover { border-color: var(--primary); box-shadow: 0 12px 32px rgba(37,99,235,0.08); }
+  .feature-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-bottom: 18px;
+  }
+  .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .feature-card p { font-size: 14.5px; color: var(--text-soft); line-height: 1.65; }
+
+  /* How it works */
+  .how { background: var(--bg-soft); }
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    position: relative;
+  }
+  .step {
+    background: white;
+    border-radius: 14px;
+    padding: 28px 24px;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .step-num {
+    position: absolute;
+    top: -16px; left: 24px;
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    box-shadow: 0 4px 10px rgba(37,99,235,0.3);
+  }
+  .step h3 { font-size: 16px; font-weight: 700; margin: 14px 0 8px; }
+  .step p { font-size: 13.5px; color: var(--text-soft); line-height: 1.6; }
+
+  /* Pricing */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    align-items: stretch;
+  }
+  .price-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .price-card.popular {
+    border: 2px solid var(--primary);
+    box-shadow: 0 20px 50px rgba(37,99,235,0.15);
+    transform: scale(1.03);
+  }
+  .price-card.popular::before {
+    content: "RECOMMENDED";
+    position: absolute;
+    top: -12px; right: 24px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .price-name { font-size: 15px; font-weight: 700; color: var(--text-soft); margin-bottom: 8px; }
+  .price-amount { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+  .price-amount .unit { font-size: 14px; font-weight: 500; color: var(--muted); }
+  .price-desc { font-size: 13px; color: var(--muted); margin: 6px 0 24px; min-height: 36px; }
+  .price-features { list-style: none; flex: 1; }
+  .price-features li {
+    font-size: 13.5px;
+    padding: 6px 0 6px 24px;
+    position: relative;
+    color: var(--text-soft);
+  }
+  .price-features li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--success);
+    font-weight: 700;
+  }
+  .price-cta {
+    margin-top: 20px;
+    text-align: center;
+    padding: 11px 0;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    background: var(--bg-soft);
+    color: var(--text);
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .price-card.popular .price-cta {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  .price-cta:hover { transform: translateY(-1px); }
+
+  /* Architecture */
+  .arch { background: var(--bg-dark); color: white; }
+  .arch .section-header h2 { color: white; }
+  .arch .section-header h2 .grad {
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .arch .section-header p { color: rgba(255,255,255,0.65); }
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  .arch-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 28px 30px;
+  }
+  .arch-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--primary-light);
+  }
+  .arch-card pre {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #cbd5e1;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .arch-card pre .hi { color: var(--primary-light); }
+  .arch-card pre .ok { color: #4ade80; }
+  .arch-card pre .warn { color: var(--accent-2); }
+  .arch-card ul { list-style: none; }
+  .arch-card ul li {
+    padding: 8px 0 8px 24px;
+    position: relative;
+    font-size: 14.5px;
+    color: rgba(255,255,255,0.85);
+  }
+  .arch-card ul li::before {
+    content: "▸";
+    position: absolute;
+    left: 4px;
+    color: var(--accent-2);
+  }
+  .arch-card ul li strong { color: white; }
+
+  /* Stats */
+  .stats { background: var(--bg-soft); padding: 80px 32px; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .stat-num {
+    font-size: 52px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .stat-lab {
+    font-size: 14px;
+    color: var(--text-soft);
+    margin-top: 10px;
+  }
+
+  /* Roadmap */
+  .roadmap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .phase-card {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 26px;
+    background: white;
+  }
+  .phase-tag {
+    display: inline-block;
+    background: #dbeafe;
+    color: var(--primary-dark);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+  .phase-card h3 { font-size: 20px; font-weight: 700; }
+  .phase-card .when { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  .phase-card ul { list-style: none; }
+  .phase-card ul li {
+    font-size: 14px;
+    padding: 6px 0 6px 22px;
+    position: relative;
+    color: var(--text-soft);
+    line-height: 1.55;
+  }
+  .phase-card ul li::before {
+    content: "○";
+    position: absolute;
+    left: 0;
+    color: var(--primary-light);
+    font-weight: 700;
+  }
+
+  /* FAQ */
+  .faq { background: var(--bg-soft); }
+  .faq-list { max-width: 820px; margin: 0 auto; }
+  details {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  details[open] { box-shadow: 0 4px 12px rgba(15,23,42,0.06); }
+  summary {
+    padding: 18px 24px;
+    font-size: 15.5px;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::after {
+    content: "+";
+    font-size: 22px;
+    color: var(--primary);
+    transition: transform 0.2s;
+    line-height: 1;
+  }
+  details[open] summary::after { content: "−"; }
+  details p, details ul {
+    padding: 0 24px 20px;
+    color: var(--text-soft);
+    font-size: 14.5px;
+    line-height: 1.7;
+  }
+  details ul { padding-left: 48px; padding-bottom: 20px; }
+
+  /* CTA */
+  .cta-section {
+    padding: 100px 32px;
+    background:
+      radial-gradient(circle at 30% 40%, rgba(96,165,250,0.25), transparent 50%),
+      radial-gradient(circle at 70% 60%, rgba(251,191,36,0.18), transparent 50%),
+      linear-gradient(135deg, var(--primary-dark) 0%, var(--bg-dark) 100%);
+    color: white;
+    text-align: center;
+  }
+  .cta-section h2 {
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+  }
+  .cta-section p {
+    font-size: 19px;
+    color: rgba(255,255,255,0.8);
+    max-width: 680px;
+    margin: 0 auto 36px;
+  }
+  .cta-section .btn-primary {
+    background: white;
+    color: var(--primary-dark);
+    padding: 16px 36px;
+    font-size: 16px;
+  }
+  .cta-section .btn-primary:hover { background: var(--accent-2); color: var(--text); }
+  .cta-section .note {
+    margin-top: 20px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+  }
+
+  /* Footer */
+  footer {
+    background: var(--bg-dark);
+    color: rgba(255,255,255,0.6);
+    padding: 48px 32px 32px;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  footer .container { max-width: 1200px; }
+  footer .logo { color: white; margin-bottom: 12px; font-size: 16px; }
+  footer p { font-size: 13px; }
+
+  /* Deliverable */
+  .deliverable-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+  .deliverable-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 30px;
+  }
+  .deliverable-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: var(--primary-dark);
+  }
+  .deliverable-card ul { list-style: none; }
+  .deliverable-card ul li {
+    padding: 6px 0 6px 22px;
+    position: relative;
+    font-size: 14.5px;
+    color: var(--text-soft);
+  }
+  .deliverable-card ul li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--success);
+    font-weight: 700;
+  }
+
+  @media (max-width: 900px) {
+    .hero h1 { font-size: 38px; }
+    .hero p.lead { font-size: 17px; }
+    .nav-links { display: none; }
+    .problem-grid, .features-grid, .pricing-grid, .roadmap-grid, .deliverable-grid { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    .arch-grid, .stats-grid { grid-template-columns: 1fr 1fr; }
+    .section-header h2, .cta-section h2 { font-size: 30px; }
+    .dash-grid { grid-template-columns: 1fr; }
+    .dash-side { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">Blog Auto<span class="dot">.</span> <span style="font-size:12px;color:var(--muted);font-weight:500;">開発提案書</span></div>
+    <div class="nav-links">
+      <a href="#problem">課題</a>
+      <a href="#deliverable">納品物</a>
+      <a href="#features">機能</a>
+      <a href="#how">開発フロー</a>
+      <a href="#pricing">費用</a>
+      <a href="#architecture">技術</a>
+      <a href="#roadmap">スケジュール</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <a href="#cta" class="nav-cta">無料相談する</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="badge">
+      <span class="dot"></span>
+      WordPress自動投稿SaaSの受託開発 · 要件定義から運用保守まで一気通貫
+    </div>
+    <h1>
+      貴社のSaaS事業を、<br>
+      <span class="grad">弊社が「動く形」で構築します。</span>
+    </h1>
+    <p class="lead">
+      WordPress自動投稿SaaS「Blog Auto」相当のプロダクトを、貴社ブランドで構築する開発提案です。
+      <strong>マルチテナント基盤・課金・AI生成・運用監視まで一括対応</strong>。
+      最短3ヶ月でMVPローンチまで導きます。
+    </p>
+    <div class="hero-cta">
+      <a href="#cta" class="btn btn-primary">無料お見積もり相談 →</a>
+      <a href="#deliverable" class="btn btn-ghost">納品物を見る</a>
+    </div>
+    <div class="hero-meta">
+      <span>初回ヒアリング無料</span>
+      <span>NDA締結対応</span>
+      <span>ソースコード完全納品</span>
+    </div>
+
+    <!-- Dashboard mock -->
+    <div class="hero-visual">
+      <div class="topbar">
+        <span></span><span></span><span></span>
+        <div class="addr">納品イメージ — お客様ブランドの管理画面</div>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-side">
+          <div class="item active">ダッシュボード</div>
+          <div class="item">記事一覧</div>
+          <div class="item">スケジュール</div>
+          <div class="item">サイト管理</div>
+          <div class="item">ブランド設定</div>
+          <div class="item">使用量</div>
+          <div class="item">請求</div>
+        </div>
+        <div class="dash-main">
+          <h4>納品プロダクトの管理画面例</h4>
+          <div class="dash-stats">
+            <div class="dash-stat">
+              <div class="num">3ヶ月</div>
+              <div class="lab">MVP納品まで</div>
+            </div>
+            <div class="dash-stat">
+              <div class="num">98.4%</div>
+              <div class="lab">想定投稿成功率</div>
+            </div>
+            <div class="dash-stat">
+              <div class="num">¥50〜</div>
+              <div class="lab">想定1記事原価</div>
+            </div>
+          </div>
+          <div class="dash-row">
+            <span class="status run"></span>
+            <span class="title">要件定義 → 設計 → 実装 → リリース まで伴走</span>
+            <span class="time">フル対応</span>
+          </div>
+          <div class="dash-row">
+            <span class="status"></span>
+            <span class="title">マルチテナント・課金・キュー基盤 一式実装</span>
+            <span class="time">標準</span>
+          </div>
+          <div class="dash-row">
+            <span class="status"></span>
+            <span class="title">Claude / Gemini API 統合・プロンプト設計</span>
+            <span class="time">標準</span>
+          </div>
+          <div class="dash-row">
+            <span class="status warn"></span>
+            <span class="title">運用保守 / SLA / インシデント対応プランあり</span>
+            <span class="time">オプション</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="stats-grid">
+    <div>
+      <div class="stat-num">3ヶ月</div>
+      <div class="stat-lab">MVP納品までの想定期間</div>
+    </div>
+    <div>
+      <div class="stat-num">¥480万〜</div>
+      <div class="stat-lab">MVP一括開発の参考価格</div>
+    </div>
+    <div>
+      <div class="stat-num">100%</div>
+      <div class="stat-lab">ソースコード納品 + IP譲渡</div>
+    </div>
+    <div>
+      <div class="stat-num">12ヶ月</div>
+      <div class="stat-lab">納品後の保守プラン提供</div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section id="problem" class="problem">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">こんなお悩み、ありませんか?</span>
+      <h2>SaaSを自社で作るのは、<span class="grad">想像以上に重い。</span></h2>
+      <p>「AIを使った新規事業を立ち上げたい」「既存ツールをSaaS化したい」<br>そう思っても、社内開発で詰まりやすい3つのポイントを、弊社が肩代わりします。</p>
+    </div>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="problem-icon">🧩</div>
+        <h3>SaaS基盤のゼロ実装が大変</h3>
+        <p>マルチテナント・課金・キュー・監査ログ・KMS暗号化。要件整理だけで数ヶ月、実装で半年は珍しくありません。</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">🤖</div>
+        <h3>AI統合の知見が社内にない</h3>
+        <p>Claude / Gemini / プロンプト設計 / トークン課金管理 / 暴走防止のサーキットブレーカ。LLM活用には独自のノウハウが必要です。</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">📈</div>
+        <h3>運用後のスケールが読めない</h3>
+        <p>テナント数が増えたとき、コストはどう増える? SLAをどう守る? 当初の設計次第で、運用コストは数倍変わります。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DELIVERABLE -->
+<section id="deliverable">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">DELIVERABLES</span>
+      <h2>納品物は、<span class="grad">「動く事業」そのもの。</span></h2>
+      <p>単なるソースコードではなく、運用に耐える設計・ドキュメント・インフラ一式をお渡しします。</p>
+    </div>
+    <div class="deliverable-grid">
+      <div class="deliverable-card">
+        <h3>① プロダクト一式</h3>
+        <ul>
+          <li>フロントエンド (Next.js / Tailwind)</li>
+          <li>バックエンドAPI (NestJS / TypeScript)</li>
+          <li>ワーカー (Cloud Run jobs / Cloud Tasks)</li>
+          <li>データベーススキーマ (PostgreSQL)</li>
+          <li>Stripe課金連携 (Subscription + Metered)</li>
+          <li>管理画面・ダッシュボード</li>
+        </ul>
+      </div>
+      <div class="deliverable-card">
+        <h3>② インフラ・運用基盤</h3>
+        <ul>
+          <li>GCPプロジェクト構築 (本番 / ステージング)</li>
+          <li>Terraform / IaCコード</li>
+          <li>CI/CDパイプライン (GitHub Actions)</li>
+          <li>監視・アラート設定 (Cloud Monitoring / Sentry)</li>
+          <li>ログ基盤・監査ログ</li>
+          <li>バックアップ・リストア手順</li>
+        </ul>
+      </div>
+      <div class="deliverable-card">
+        <h3>③ ドキュメント</h3>
+        <ul>
+          <li>要件定義書 / 機能仕様書</li>
+          <li>アーキテクチャ図 / シーケンス図</li>
+          <li>API仕様書 (OpenAPI)</li>
+          <li>運用マニュアル / オンコール手順書</li>
+          <li>セキュリティ設計書</li>
+          <li>テスト計画・テスト結果</li>
+        </ul>
+      </div>
+      <div class="deliverable-card">
+        <h3>④ ノウハウ移管</h3>
+        <ul>
+          <li>ソースコードの完全納品 (権利譲渡)</li>
+          <li>貴社エンジニアへの引き継ぎセッション</li>
+          <li>プロンプトテンプレート資産</li>
+          <li>初期テナント立ち上げ手順</li>
+          <li>納品後3ヶ月の質問対応窓口</li>
+          <li>運用引き継ぎ後のレビュー (オプション)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="problem">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">SCOPE</span>
+      <h2>SaaSとして必要なものは、<br><span class="grad">標準スコープに含めます。</span></h2>
+      <p>マルチテナント基盤・課金・キュー・監査ログ・セキュリティ — エンタープライズ要件まで考え抜いた設計。</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🏢</div>
+        <h3>マルチテナント設計</h3>
+        <p>Organization単位でデータを完全分離。ORM層に <code>tenant_id</code> スコープを強制し、漏洩リスクを構造的に排除します。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔐</div>
+        <h3>KMS暗号化</h3>
+        <p>WordPressアプリケーションパスワード・APIキーはGCP Cloud KMSで暗号化。90日ごとのDEK自動ローテーション。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💳</div>
+        <h3>Stripe従量課金</h3>
+        <p>月額サブスク + 記事数のMetered Billing。Stripe Customer Portalでカード変更・請求書DLまでセルフサービス化。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚙️</div>
+        <h3>非同期ジョブキュー</h3>
+        <p>Cloud Tasks ベースの実行基盤。テナント別concurrency制御・指数バックオフ・DLQで失敗時もリトライ。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>使用量メータリング</h3>
+        <p>記事/画像生成数をリアルタイム計測。プラン上限・日次コスト上限・サーキットブレーカで暴走を防止。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h3>BrandProfile</h3>
+        <p>業種・読者ペルソナ・文体・NGワード・必須CTAをテナント別に設定。few-shotで過去の高評価記事を学習。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔌</div>
+        <h3>公開API + Webhook</h3>
+        <p>REST API・HMAC署名つきWebhook。ZapierやMakeとの連携も視野。Phase2以降で実装可能。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👥</div>
+        <h3>チーム・RBAC</h3>
+        <p>Owner / Admin / Editor / Viewer の4階層ロール。代理店プランで複数クライアントを安全に管理。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <h3>監査ログ</h3>
+        <p>全書き込み操作を <code>audit_logs</code> に記録。Owner権限で90日分閲覧可能。法務・コンプラ対応にも。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="how">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">DELIVERY FLOW</span>
+      <h2><span class="grad">4フェーズ</span>で着実に、<br>事業ローンチまで伴走します。</h2>
+      <p>初回ヒアリングから本番ローンチまで、貴社の事業責任者と密に連携しながら進めます。</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>ヒアリング・要件定義</h3>
+        <p>事業の狙い・ターゲット・収益モデルをすり合わせ。スコープと費用感を確定します。(2〜3週間)</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>設計・プロトタイプ</h3>
+        <p>アーキテクチャ設計・画面設計・データモデルを策定。重要画面はFigmaでプロトタイプ提示。(3〜4週間)</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>実装・QA</h3>
+        <p>週次でデモ環境を更新しながらアジャイル開発。受け入れテスト・負荷テストまで完了させます。(8〜10週間)</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>本番リリース・引継ぎ</h3>
+        <p>本番GCPへデプロイ・初期テナント設定。運用ドキュメントとともに貴社チームへ引き継ぎます。(2週間)</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">PRICING</span>
+      <h2>開発費用の<span class="grad">参考プラン</span></h2>
+      <p>スコープ・期間・運用要件に応じて、お見積もりは個別調整いたします。下記は標準的な構成例です。</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-name">MVPプラン</div>
+        <div class="price-amount">¥480万〜<span class="unit"> / 一括</span></div>
+        <div class="price-desc">まず事業仮説を検証したい方へ</div>
+        <ul class="price-features">
+          <li>3ヶ月でMVPローンチ</li>
+          <li>シングルテナントから開始</li>
+          <li>記事生成 + WordPress投稿</li>
+          <li>Stripe月額課金 1プラン</li>
+          <li>本番GCP環境構築</li>
+          <li>ソースコード完全納品</li>
+          <li>運用ドキュメント一式</li>
+        </ul>
+        <div class="price-cta">このプランで相談</div>
+      </div>
+      <div class="price-card popular">
+        <div class="price-name">SaaSローンチプラン</div>
+        <div class="price-amount">¥980万〜<span class="unit"> / 一括</span></div>
+        <div class="price-desc">本格的にSaaS事業化したい方へ</div>
+        <ul class="price-features">
+          <li>5〜6ヶ月で本格リリース</li>
+          <li>マルチテナント完全対応</li>
+          <li>3プラン構成 + 従量課金</li>
+          <li>RBAC・監査ログ・KMS</li>
+          <li>BrandProfile・使用量制御</li>
+          <li>Terraform / CI-CD / 監視</li>
+          <li>納品後3ヶ月の質問対応無料</li>
+        </ul>
+        <div class="price-cta">このプランで相談</div>
+      </div>
+      <div class="price-card">
+        <div class="price-name">エンタープライズ</div>
+        <div class="price-amount">個別見積<span class="unit"></span></div>
+        <div class="price-desc">大規模・特殊要件のある事業者向け</div>
+        <ul class="price-features">
+          <li>SAML SSO / SCIM対応</li>
+          <li>専用環境 (DB分離)</li>
+          <li>ISMS / SOC2 取得支援</li>
+          <li>BYOK / 顧客KMS連携</li>
+          <li>独自AIモデルの組み込み</li>
+          <li>SLA 99.9% 保証</li>
+          <li>専任PM + 専用Slack</li>
+        </ul>
+        <div class="price-cta">個別にご相談</div>
+      </div>
+    </div>
+    <div style="margin-top:40px;background:var(--bg-soft);border:1px solid var(--border);border-radius:14px;padding:24px 28px;">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:10px;">運用保守オプション</h3>
+      <p style="font-size:14.5px;color:var(--text-soft);line-height:1.7;">
+        納品後の継続運用も承ります。<strong>月額¥15万〜</strong> でインシデント対応・小規模機能追加・GCP費用最適化・AI APIコストモニタリングを含むサポートプランをご用意。
+        SLA設定・オンコール対応・四半期レビューなどはAgencyプラン以降で対応します。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture" class="arch">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">UNDER THE HOOD</span>
+      <h2>NestJS × Cloud Run の<br><span class="grad">堅牢なアーキテクチャ</span></h2>
+      <p>弊社が標準採用する技術スタック。本番運用で実績のある構成を、貴社プロダクトにも適用します。</p>
+    </div>
+    <div class="arch-grid">
+      <div class="arch-card">
+        <h3>ジョブ実行基盤</h3>
+        <pre>[<span class="hi">UI / API</span>] ──▶ [<span class="hi">Cloud Tasks</span>]
+                       │
+                       ▼
+[<span class="ok">Worker (Cloud Run jobs)</span>]
+   ├─ Claude 4.6 記事生成
+   ├─ Gemini 画像生成
+   ├─ WordPress REST 投稿
+   └─ Webhook + UsageRecord</pre>
+      </div>
+      <div class="arch-card">
+        <h3>データモデル</h3>
+        <pre><span class="hi">Organization</span> (= 課金単位 / テナント)
+  ├─ Members (User × Role)
+  ├─ Sites (WP接続 + KMS暗号化)
+  │   └─ Schedules / Articles
+  ├─ BrandProfiles
+  ├─ ApiKeys
+  └─ Subscription (Stripe)</pre>
+      </div>
+      <div class="arch-card">
+        <h3>セキュリティ</h3>
+        <ul>
+          <li><strong>テナント分離:</strong> ORM層で <code>WHERE tenant_id = ?</code> を強制</li>
+          <li><strong>SSRF対策:</strong> プライベートIP・metadata endpointをブロック</li>
+          <li><strong>暗号化:</strong> KMS envelope encryption / Argon2id ハッシュ</li>
+          <li><strong>監査:</strong> 全書き込みを <code>audit_logs</code> に記録</li>
+        </ul>
+      </div>
+      <div class="arch-card">
+        <h3>運用・監視</h3>
+        <ul>
+          <li><strong>計測:</strong> テナント別の成功率・p50/p95レイテンシ</li>
+          <li><strong>監視:</strong> Cloud Logging + Monitoring + Sentry</li>
+          <li><strong>コスト制御:</strong> 日次AI原価が予算150%でレート制御</li>
+          <li><strong>バックアップ:</strong> Postgres PITR + 日次スナップショット30日</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">SCHEDULE</span>
+      <h2>3フェーズで、<span class="grad">段階的に納品。</span></h2>
+      <p>MVPを早期に出して市場検証 → グロース機能の追加 → エンタープライズ対応 — というのが弊社の標準的な進め方です。</p>
+    </div>
+    <div class="roadmap-grid">
+      <div class="phase-card">
+        <span class="phase-tag">PHASE 1</span>
+        <h3>ローンチMVP</h3>
+        <div class="when">契約から3ヶ月以内</div>
+        <ul>
+          <li>マルチテナント基盤 (PostgreSQL)</li>
+          <li>サインアップ・メール認証</li>
+          <li>WordPress接続ウィザード</li>
+          <li>Stripe Subscription (基本3プラン)</li>
+          <li>Cloud Tasks ベースのキュー</li>
+          <li>使用量メータ・月次クォータ</li>
+          <li>監査ログ・利用規約・特商法</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <span class="phase-tag">PHASE 2</span>
+        <h3>グロース機能</h3>
+        <div class="when">ローンチ後 4〜6ヶ月</div>
+        <ul>
+          <li>マルチサイト・メンバー招待・RBAC</li>
+          <li>BrandProfile・カスタムプロンプト</li>
+          <li>公開API + Webhook</li>
+          <li>Google OAuth / 2FA</li>
+          <li>Agencyプラン追加</li>
+          <li>使用量ダッシュボード</li>
+          <li>レポートPDF/CSVエクスポート</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <span class="phase-tag">PHASE 3</span>
+        <h3>エンタープライズ対応</h3>
+        <div class="when">ローンチ後 7〜12ヶ月</div>
+        <ul>
+          <li>SAML SSO / SCIM</li>
+          <li>BYOK (顧客のAIキー持ち込み)</li>
+          <li>カスタム記事タイプ・few-shot学習</li>
+          <li>Zapier / Make 連携</li>
+          <li>Shopify / 楽天 EC連携</li>
+          <li>ISMS / SOC2 取得準備</li>
+          <li>専用環境プラン (DB分離)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="faq">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">FAQ</span>
+      <h2>外注先選定でよくいただくご質問</h2>
+    </div>
+    <div class="faq-list">
+      <details open>
+        <summary>ソースコードは納品されますか? 知的財産は誰のものになりますか?</summary>
+        <p>完全納品いたします。納品物の著作権・知的財産権はすべて貴社へ譲渡される契約形態を標準としています。GitHubリポジトリの管理権限ごと移管し、弊社側のアクセスは契約終了時点で削除します。OSSライブラリのライセンス管理一覧もあわせてお渡しします。</p>
+      </details>
+      <details>
+        <summary>納期はどれくらいですか? 遅延した場合の対応は?</summary>
+        <p>MVPプランで3ヶ月、SaaSローンチプランで5〜6ヶ月が標準です。週次スプリント + デモで進捗を可視化し、遅延リスクは早期に共有します。マイルストーン未達時のペナルティ条項を契約に明記することも可能です。</p>
+      </details>
+      <details>
+        <summary>開発中の機密情報はどう守られますか?</summary>
+        <p>契約前のヒアリング段階からNDAを締結します。開発中のソースは貴社GitHub Organization内のプライベートリポジトリで管理し、アクセス権を限定。本番のAPIキー・顧客データには弊社開発メンバーは原則アクセスしません。</p>
+      </details>
+      <details>
+        <summary>納品後、自社で運用できますか? 引き継ぎはどうなりますか?</summary>
+        <p>納品物にはコードのほか、アーキテクチャ図・運用マニュアル・オンコール手順書・トラブルシューティング集が含まれます。引き継ぎセッション(計4〜6時間想定)を実施し、納品後3ヶ月間は質問対応窓口を無料でご提供します。自社運用が不安な場合は月額¥15万〜の保守プランもご利用いただけます。</p>
+      </details>
+      <details>
+        <summary>AIのAPI費用やGCPのインフラ費用は誰が負担しますか?</summary>
+        <p>原則として貴社契約のアカウントで運用します(Anthropic・Google・Stripe・GCP)。開発期間中の検証費用も貴社負担となりますが、初期見積もり時にコスト試算をお渡しします。BYOK構成のためAPIコストの透明性は最大化されます。</p>
+      </details>
+      <details>
+        <summary>追加機能の依頼や仕様変更はできますか?</summary>
+        <p>可能です。Phase1スコープ内の仕様調整は当初見積もりに含みます。スコープ外の追加機能は、別途お見積もりのうえ着手します。納品後のグロース支援(Phase2/3)も同じ体制で継続対応できます。</p>
+      </details>
+      <details>
+        <summary>過去にどんな開発実績がありますか?</summary>
+        <p>NestJS + Cloud Run構成でのマルチテナントSaaS、AI(Claude / Gemini)を活用したコンテンツ生成基盤、Stripe従量課金の本番運用などの実績があります。具体的な実績はNDA締結後に個別にご紹介可能です。</p>
+      </details>
+      <details>
+        <summary>請求・契約形態はどうなっていますか?</summary>
+        <p>請負契約を標準とします。着手金30% / 中間40% / 検収30%のマイルストーン分割が一般的です。準委任(SES型)・継続的な保守委託のいずれにも対応可能です。請求書払い・分割払いもご相談ください。</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta" class="cta-section">
+  <div class="container">
+    <h2>事業の構想を、<br>「動くプロダクト」に変えませんか。</h2>
+    <p>まずは無料のヒアリング(30〜60分)で、ご構想を伺います。<br>NDA締結のうえ、概算スコープと費用感をその場でお伝えできます。</p>
+    <a href="#" class="btn btn-primary">無料で相談する →</a>
+    <div class="note">初回ヒアリング無料 · NDA締結対応 · 営業日2日以内にご返信</div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="logo">Blog Auto<span style="color:var(--primary-light);">.</span> <span style="font-size:13px;color:rgba(255,255,255,0.5);">開発提案書</span></div>
+    <p>WordPress自動投稿SaaSの受託開発提案 · NestJS + Cloud Run + Claude 4.6 + Gemini</p>
+    <p style="margin-top:8px;">© 2026 — Proposal Draft v0.1 / 2026-05-13</p>
+  </div>
+</footer>
+
+</body>
+</html>

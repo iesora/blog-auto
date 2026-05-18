@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blog Auto — サービス紹介ガイド</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --primary-soft: #eff6ff;
+    --accent: #f59e0b;
+    --text: #0f172a;
+    --text-soft: #334155;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --bg: #ffffff;
+    --bg-soft: #f8fafc;
+    --success: #16a34a;
+    --warning: #d97706;
+    --info: #0891b2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.85;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+  .sidebar {
+    background: var(--bg-soft);
+    border-right: 1px solid var(--border);
+    padding: 36px 24px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .sidebar .doc-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 2px;
+  }
+  .sidebar .doc-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .toc-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .toc { list-style: none; }
+  .toc li { margin-bottom: 2px; }
+  .toc li a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--text-soft);
+    font-weight: 600;
+  }
+  .toc li a:hover { background: white; color: var(--primary); text-decoration: none; }
+  .toc .ic {
+    width: 22px; height: 22px;
+    background: white;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  /* Main */
+  main {
+    max-width: 920px;
+    padding: 56px 64px 120px;
+  }
+
+  /* Hero */
+  .hero {
+    margin-bottom: 56px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero .tag {
+    display: inline-block;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+    margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-bottom: 18px;
+  }
+  .hero h1 .hl {
+    background: linear-gradient(transparent 65%, #fde68a 65%);
+  }
+  .hero .lead {
+    font-size: 18px;
+    color: var(--text-soft);
+    line-height: 1.8;
+  }
+  .hero-illust {
+    margin-top: 36px;
+    background: linear-gradient(135deg, #eff6ff 0%, #fef3c7 100%);
+    border-radius: 16px;
+    padding: 32px 24px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+    text-align: center;
+  }
+  .hero-illust .box {
+    background: white;
+    border-radius: 12px;
+    padding: 18px 14px;
+    box-shadow: 0 4px 14px rgba(15,23,42,0.06);
+  }
+  .hero-illust .box .ic {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+  .hero-illust .box .ti {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .hero-illust .box .sub {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .hero-illust .arrow {
+    font-size: 22px;
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* Section */
+  section { margin-bottom: 64px; }
+  h2.sec {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  h2.sec .ic {
+    width: 44px; height: 44px;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .sec-lead {
+    color: var(--muted);
+    font-size: 15px;
+    margin-bottom: 28px;
+    padding-left: 58px;
+  }
+  h3.sub {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 32px 0 10px;
+  }
+  p { margin: 10px 0; color: var(--text-soft); }
+  p strong { color: var(--text); }
+
+  /* Persona cards */
+  .persona-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .persona {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .persona .pic {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dbeafe 0%, #fef3c7 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .persona h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .persona p {
+    font-size: 14px;
+    color: var(--text-soft);
+    margin: 0;
+    line-height: 1.7;
+  }
+  .persona .tag {
+    display: inline-block;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-top: 8px;
+  }
+
+  /* Feature cards */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .feat {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 26px 28px;
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 22px;
+    transition: all 0.15s;
+  }
+  .feat:hover { border-color: var(--primary); box-shadow: 0 8px 24px rgba(37,99,235,0.06); }
+  .feat .ic {
+    width: 56px; height: 56px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+  .feat h4 {
+    font-size: 19px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .feat .what-for {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .feat p {
+    font-size: 14.5px;
+    color: var(--text-soft);
+    margin: 0 0 10px;
+    line-height: 1.7;
+  }
+  .feat .detail {
+    background: var(--bg-soft);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    font-size: 13.5px;
+    color: var(--text-soft);
+  }
+  .feat .detail strong { color: var(--text); display: block; margin-bottom: 4px; font-size: 12.5px; }
+  .feat ul {
+    list-style: none;
+    margin-top: 6px;
+  }
+  .feat ul li {
+    font-size: 13.5px;
+    color: var(--text-soft);
+    padding: 3px 0 3px 18px;
+    position: relative;
+  }
+  .feat ul li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--success);
+    font-weight: 700;
+  }
+
+  /* Steps */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    position: relative;
+  }
+  .step {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 18px;
+    text-align: center;
+  }
+  .step .num {
+    width: 32px; height: 32px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  .step .ic {
+    font-size: 34px;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .step h5 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .step p {
+    font-size: 13px;
+    color: var(--text-soft);
+    margin: 0;
+    line-height: 1.65;
+  }
+
+  /* Comparison: before/after */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr;
+    gap: 16px;
+    align-items: stretch;
+    margin: 14px 0 20px;
+  }
+  .compare .col {
+    border-radius: 14px;
+    padding: 22px 24px;
+  }
+  .compare .col.before {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+  }
+  .compare .col.after {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+  }
+  .compare .col h5 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text-soft);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .compare .col.before h5 { color: #991b1b; }
+  .compare .col.after h5 { color: #166534; }
+  .compare .col ul { list-style: none; }
+  .compare .col li {
+    font-size: 14px;
+    padding: 4px 0 4px 22px;
+    position: relative;
+    color: var(--text-soft);
+    line-height: 1.65;
+  }
+  .compare .col.before li::before {
+    content: "✗";
+    position: absolute; left: 4px;
+    color: #dc2626; font-weight: 700;
+  }
+  .compare .col.after li::before {
+    content: "✓";
+    position: absolute; left: 4px;
+    color: var(--success); font-weight: 700;
+  }
+  .compare .arrow {
+    align-self: center;
+    text-align: center;
+    font-size: 28px;
+    color: var(--primary);
+  }
+
+  /* Plan table */
+  .plan-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 18px;
+    font-size: 14px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.05);
+  }
+  .plan-table th {
+    background: var(--bg-soft);
+    padding: 16px 14px;
+    font-weight: 700;
+    text-align: center;
+    font-size: 14px;
+    border-bottom: 2px solid var(--border);
+  }
+  .plan-table th:first-child {
+    text-align: left;
+    background: white;
+  }
+  .plan-table th.popular {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    position: relative;
+  }
+  .plan-table th.popular::after {
+    content: "おすすめ";
+    position: absolute;
+    top: 4px; right: 6px;
+    background: var(--accent);
+    color: white;
+    font-size: 9.5px;
+    padding: 2px 6px;
+    border-radius: 999px;
+  }
+  .plan-table td {
+    padding: 14px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    color: var(--text-soft);
+  }
+  .plan-table td:first-child {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--bg-soft);
+  }
+  .plan-table tr:last-child td { border-bottom: none; }
+  .plan-table .price {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .plan-table .price .u {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+    display: block;
+  }
+  .plan-table .yes { color: var(--success); font-weight: 700; }
+  .plan-table .no { color: #cbd5e1; }
+  .plan-table .popular-col { background: #f0f7ff; }
+
+  /* Security cards */
+  .sec-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .sec-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+  }
+  .sec-card .ic {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .sec-card h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .sec-card p {
+    font-size: 14px;
+    color: var(--text-soft);
+    margin: 0;
+    line-height: 1.7;
+  }
+  .sec-card .ex {
+    margin-top: 12px;
+    background: var(--bg-soft);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .sec-card .ex strong { color: var(--text-soft); }
+
+  /* Roadmap */
+  .roadmap {
+    position: relative;
+    padding-left: 32px;
+  }
+  .roadmap::before {
+    content: "";
+    position: absolute;
+    left: 12px; top: 8px; bottom: 8px;
+    width: 2px;
+    background: var(--border);
+  }
+  .roadmap .item {
+    position: relative;
+    margin-bottom: 28px;
+  }
+  .roadmap .item::before {
+    content: "";
+    position: absolute;
+    left: -28px; top: 6px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px var(--primary);
+  }
+  .roadmap .item.future::before { background: white; }
+  .roadmap .item h4 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .roadmap .item .when {
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+  }
+  .roadmap .item p {
+    font-size: 14px;
+    color: var(--text-soft);
+    margin: 0;
+    line-height: 1.7;
+  }
+
+  /* FAQ */
+  details {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  details[open] { box-shadow: 0 2px 8px rgba(15,23,42,0.04); }
+  summary {
+    padding: 16px 22px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text);
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before {
+    content: "Q.";
+    color: var(--primary);
+    font-weight: 800;
+    margin-right: 10px;
+  }
+  summary::after {
+    content: "+";
+    font-size: 20px;
+    color: var(--primary);
+    margin-left: 12px;
+  }
+  details[open] summary::after { content: "−"; }
+  details > div {
+    padding: 0 22px 18px 50px;
+    color: var(--text-soft);
+    font-size: 14.5px;
+    line-height: 1.8;
+    position: relative;
+  }
+  details > div::before {
+    content: "A.";
+    position: absolute;
+    left: 22px;
+    color: var(--success);
+    font-weight: 800;
+  }
+
+  /* Note */
+  .note {
+    background: var(--primary-soft);
+    border-left: 3px solid var(--primary);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    font-size: 14.5px;
+    color: var(--text-soft);
+  }
+  .note strong { color: var(--primary-dark); }
+  .note.tip { background: #fef3c7; border-left-color: var(--warning); }
+  .note.tip strong { color: var(--warning); }
+
+  /* Use case */
+  .usecase {
+    background: linear-gradient(135deg, #eff6ff 0%, #fef3c7 100%);
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin: 20px 0;
+  }
+  .usecase .label {
+    display: inline-block;
+    background: white;
+    color: var(--primary-dark);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+    letter-spacing: 0.04em;
+  }
+  .usecase h5 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .usecase p {
+    font-size: 14px;
+    color: var(--text-soft);
+    margin: 0;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 32px 24px 80px; }
+    .hero h1 { font-size: 28px; }
+    .hero-illust { grid-template-columns: 1fr; }
+    .hero-illust .arrow { transform: rotate(90deg); }
+    .persona-grid, .sec-grid, .compare { grid-template-columns: 1fr; }
+    .compare .arrow { transform: rotate(90deg); }
+    .compare { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    .feat { grid-template-columns: 1fr; }
+    .plan-table { font-size: 12px; }
+    .plan-table th, .plan-table td { padding: 10px 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="doc-title">Blog Auto</div>
+    <div class="doc-sub">サービス紹介ガイド</div>
+    <div class="toc-title">もくじ</div>
+    <ul class="toc">
+      <li><a href="#about"><span class="ic">📘</span>このサービスとは</a></li>
+      <li><a href="#who"><span class="ic">👥</span>どんな方が使う?</a></li>
+      <li><a href="#problem"><span class="ic">💡</span>解決できるお悩み</a></li>
+      <li><a href="#features"><span class="ic">✨</span>主な機能</a></li>
+      <li><a href="#ai-cost"><span class="ic">🤖</span>AIモデルとコスト</a></li>
+      <li><a href="#flow"><span class="ic">🔄</span>使う流れ</a></li>
+      <li><a href="#plan"><span class="ic">💴</span>料金プラン</a></li>
+      <li><a href="#security"><span class="ic">🛡️</span>安心のしくみ</a></li>
+      <li><a href="#roadmap"><span class="ic">🗺️</span>これからの予定</a></li>
+      <li><a href="#faq"><span class="ic">❓</span>よくある質問</a></li>
+    </ul>
+  </aside>
+
+  <main>
+    <!-- Hero -->
+    <div class="hero" id="about">
+      <span class="tag">サービス紹介ガイド</span>
+      <h1>
+        WordPress記事を、<br>
+        <span class="hl">AIが書いて自動で公開</span>するサービスです。
+      </h1>
+      <p class="lead">
+        Blog Auto は、キーワードと公開時刻を登録しておくだけで、AIが記事の文章と画像をつくり、
+        あなたのWordPressサイトに自動で投稿するサービスです。難しい設定や操作は必要ありません。
+      </p>
+
+      <div class="hero-illust">
+        <div class="box">
+          <div class="ic">📝</div>
+          <div class="ti">キーワードを<br>登録する</div>
+          <div class="sub">あなた</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="box">
+          <div class="ic">🤖</div>
+          <div class="ti">AIが記事と<br>画像をつくる</div>
+          <div class="sub">Blog Auto</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="box">
+          <div class="ic">🌐</div>
+          <div class="ti">WordPressに<br>自動で公開</div>
+          <div class="sub">あなたのサイト</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Who -->
+    <section id="who">
+      <h2 class="sec"><span class="ic">👥</span>どんな方が使うサービス?</h2>
+      <p class="sec-lead">「定期的にブログ記事を更新したいけれど、書く時間がない」とお悩みの方に向けたサービスです。</p>
+
+      <div class="persona-grid">
+        <div class="persona">
+          <div class="pic">👩‍💻</div>
+          <div>
+            <h4>副業でブログ運営する個人の方</h4>
+            <p>仕事の合間に記事を書き続けるのは大変。AIに書いてもらって、コツコツ更新を続けたい方に。</p>
+            <span class="tag">Starterプラン</span>
+          </div>
+        </div>
+        <div class="persona">
+          <div class="pic">🏪</div>
+          <div>
+            <h4>自社メディアを運営する中小企業</h4>
+            <p>集客のためにブログを書いているけれど、月20本のノルマがきつい。コストを抑えて量を出したい方に。</p>
+            <span class="tag">Proプラン</span>
+          </div>
+        </div>
+        <div class="persona">
+          <div class="pic">🏢</div>
+          <div>
+            <h4>複数サイトを運用する代理店・制作会社</h4>
+            <p>クライアントのサイトを何件もまとめて更新したい。スタッフ全員で1つのツールを使いたい方に。</p>
+            <span class="tag">Agencyプラン</span>
+          </div>
+        </div>
+        <div class="persona">
+          <div class="pic">🏛️</div>
+          <div>
+            <h4>セキュリティ要件が厳しい大企業</h4>
+            <p>会社のログインシステムと連携したい・専用環境がほしい、といった要望にお応えできます。</p>
+            <span class="tag">Enterpriseプラン</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Problem -->
+    <section id="problem">
+      <h2 class="sec"><span class="ic">💡</span>解決できるお悩み</h2>
+      <p class="sec-lead">これまで「人手でやっていた」ブログ運用が、こんなふうに変わります。</p>
+
+      <div class="compare">
+        <div class="col before">
+          <h5>これまで(人手で運用)</h5>
+          <ul>
+            <li>1記事書くのに2〜3時間かかる</li>
+            <li>外注すると1本5,000〜10,000円</li>
+            <li>ライターによって文体がバラバラ</li>
+            <li>更新が止まると検索順位も落ちる</li>
+            <li>誤字脱字・NG表現のチェックが大変</li>
+          </ul>
+        </div>
+        <div class="arrow">→</div>
+        <div class="col after">
+          <h5>Blog Auto を使うと</h5>
+          <ul>
+            <li>1記事あたりわずか数十円〜</li>
+            <li>キーワードを登録するだけ</li>
+            <li>サイトごとの文体ルールを統一</li>
+            <li>夜や休日も自動で更新が続く</li>
+            <li>NGワードは事前に自動チェック</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features">
+      <h2 class="sec"><span class="ic">✨</span>主な機能</h2>
+      <p class="sec-lead">「やりたいこと」ごとに、どんな機能が用意されているかをご紹介します。</p>
+
+      <div class="feat-grid">
+
+        <div class="feat">
+          <div class="ic">🔌</div>
+          <div>
+            <h4>WordPressサイトとの接続 <span class="what-for">最初に1回だけ</span></h4>
+            <p>ご利用中のWordPressサイトを、Blog Auto に登録します。サイト側に追加のソフトを入れる必要はありません。</p>
+            <div class="detail">
+              <strong>具体的にできること</strong>
+              <ul>
+                <li>サイトのURLとパスワードを入力するだけで接続完了</li>
+                <li>接続できているか自動でチェック</li>
+                <li>WordPressのカテゴリ・タグを自動で取り込み</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="ic">📅</div>
+          <div>
+            <h4>記事の予約投稿 <span class="what-for">毎回の作業</span></h4>
+            <p>キーワードと公開したい日時を登録すると、その時刻にあわせてAIが記事を生成し、自動でWordPressに投稿します。</p>
+            <div class="detail">
+              <strong>登録するもの</strong>
+              <ul>
+                <li>記事のキーワード(例:「副業 確定申告」)</li>
+                <li>記事のタイプ(解説 / ハウツー / 比較 など)</li>
+                <li>公開したい日時(5分単位で指定可能)</li>
+                <li>サムネイル画像を作るかどうか</li>
+                <li>文字数の目安(2000 / 4000 / 6000文字)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="ic">📋</div>
+          <div>
+            <h4>まとめて予約(CSV取り込み) <span class="what-for">大量の更新に</span></h4>
+            <p>キーワードを表計算ソフトでまとめておけば、ファイルをアップロードするだけで一気に何十本も予約できます。</p>
+            <div class="detail">
+              <strong>こんなときに便利</strong>
+              <ul>
+                <li>1ヶ月分の記事をまとめて仕込んでおきたい</li>
+                <li>SEO担当者がExcelで作ったキーワードリストをそのまま使いたい</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="ic">🎨</div>
+          <div>
+            <h4>サイトごとのトーン設定 <span class="what-for">ブランド統一</span></h4>
+            <p>「ですます調で書く」「NGワードは避ける」「最後に決まったCTAを入れる」など、サイトのカラーをあらかじめ設定できます。</p>
+            <div class="detail">
+              <strong>設定できる内容</strong>
+              <ul>
+                <li>業種・読者の年代や知識レベル</li>
+                <li>文体(です・ます調 / である調)</li>
+                <li>使ってはいけないNGワード</li>
+                <li>必ず記事の最後に入れたい文章(CTA)</li>
+                <li>薬機法・景表法に触れそうな表現の自動チェック</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="ic">🖼️</div>
+          <div>
+            <h4>記事画像・サムネイルの自動生成 <span class="what-for">画像も自動</span></h4>
+            <p>記事に合わせたサムネイル画像を、AIが自動でつくります。記事の内容に合った雰囲気の画像が生成されるので、わざわざ写真素材を探す必要がありません。</p>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="ic">📊</div>
+          <div>
+            <h4>使用量ダッシュボード <span class="what-for">使いすぎ防止</span></h4>
+            <p>今月どれくらい記事を生成したか、どれくらいコストがかかっているかが、ひと目でわかります。プラン上限を超えそうになったら自動でお知らせします。</p>
+            <div class="detail">
+              <strong>暴走を防ぐしくみ</strong>
+              <ul>
+                <li>プラン上限に達したら自動で生成停止</li>
+                <li>1日あたりのAI利用料に上限を設定可能</li>
+                <li>想定の1.5倍を超えると自動でブレーキ</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="ic">👥</div>
+          <div>
+            <h4>チームでの利用・権限管理 <span class="what-for">複数人で運用</span></h4>
+            <p>1つのアカウントに、複数のメンバーを招待できます。役割によって「見るだけ」「記事だけ書ける」「すべて管理できる」など権限を分けられます。</p>
+            <div class="detail">
+              <strong>4つの役割</strong>
+              <ul>
+                <li><strong>オーナー</strong>:すべての操作と請求情報の管理</li>
+                <li><strong>管理者</strong>:メンバー招待やサイト編集</li>
+                <li><strong>編集者</strong>:記事の生成と予約</li>
+                <li><strong>閲覧者</strong>:結果を見るだけ</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="ic">💳</div>
+          <div>
+            <h4>かんたんお支払い <span class="what-for">セルフサービス</span></h4>
+            <p>クレジットカードを登録するだけで、毎月自動で請求されます。プラン変更・解約・カード変更・請求書ダウンロードもすべて画面から操作できます。</p>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="ic">📜</div>
+          <div>
+            <h4>操作ログ(監査ログ) <span class="what-for">企業の安心</span></h4>
+            <p>「いつ・誰が・何をしたか」を自動で記録します。法務やコンプライアンス対応が必要な企業様にも安心してご利用いただけます。</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- AI cost -->
+    <section id="ai-cost">
+      <h2 class="sec"><span class="ic">🤖</span>AIモデルと1記事のコスト</h2>
+      <p class="sec-lead">記事を書くAIには「賢さ」と「料金」が違うモデルがいくつかあります。サイトの用途や予算にあわせて、好きなモデルを選べます。</p>
+
+      <div class="note">
+        <strong>かんたんに言うと:</strong> AIにも「軽自動車」「セダン」「高級車」のような違いがあります。スピード重視か、品質重視かで使い分けます。サムネ画像にもAIを使っており、こちらも別のモデルを選べます。
+      </div>
+
+      <h3 class="sub">3つのモードから選べます</h3>
+
+      <div class="feat-grid">
+        <div class="feat">
+          <div class="ic">🌱</div>
+          <div>
+            <h4>節約モード <span class="what-for">大量更新向け</span></h4>
+            <p>もっとも軽くて速いAIを使います。1記事あたり10〜20円ほどで、月100本でも合計2,000円程度。とにかく更新頻度を上げたいときに。</p>
+            <div class="detail">
+              <strong>使われるAIモデル</strong>
+              <ul>
+                <li>本文:Claude Haiku 4.5(軽量・高速モデル)</li>
+                <li>画像:Gemini Flash(軽量モデル)</li>
+                <li>品質:標準的な記事は十分書ける。専門的な内容はやや弱い。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat" style="border-color:var(--primary);box-shadow:0 6px 20px rgba(37,99,235,0.08);">
+          <div class="ic">⚖️</div>
+          <div>
+            <h4>バランスモード <span class="what-for">おすすめ・初期設定</span></h4>
+            <p>品質とコストのバランスがいい中堅モデル。SEO狙いの本格ブログにちょうどよく、ほとんどのお客様はこのモードを使っています。</p>
+            <div class="detail">
+              <strong>使われるAIモデル</strong>
+              <ul>
+                <li>本文:Claude Sonnet 4.6(中堅モデル)</li>
+                <li>画像:Gemini 2.5 Pro</li>
+                <li>品質:文章のまとまり・読みやすさが高い。多くの分野で活用可能。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="ic">💎</div>
+          <div>
+            <h4>高品質モード <span class="what-for">専門記事向け</span></h4>
+            <p>もっとも賢いAIを使います。1記事に100〜180円ほどかかりますが、専門性の高い記事や、社外に出しても恥ずかしくない高品質な記事を書くときに。</p>
+            <div class="detail">
+              <strong>使われるAIモデル</strong>
+              <ul>
+                <li>本文:Claude Opus 4.7(最上位モデル)</li>
+                <li>画像:Gemini 2.5 Pro</li>
+                <li>品質:複雑なテーマ・専門分野でも自然な文章。長い記事も得意。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sub">1記事あたりのコスト比較</h3>
+      <p>1記事 = 約4,000文字 + サムネイル画像1枚を生成した場合の目安です(2026年5月時点)。</p>
+
+      <table class="plan-table">
+        <thead>
+          <tr>
+            <th>モード</th>
+            <th>本文AI</th>
+            <th>画像AI</th>
+            <th>1記事あたり</th>
+            <th>月30本</th>
+            <th>月100本</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>🌱 節約モード</td>
+            <td>Claude Haiku 4.5</td>
+            <td>Gemini Flash</td>
+            <td><strong style="color:var(--success);">約 ¥10〜20</strong></td>
+            <td>約 ¥300〜600</td>
+            <td>約 ¥1,000〜2,000</td>
+          </tr>
+          <tr class="popular-col">
+            <td>⚖️ バランスモード</td>
+            <td>Claude Sonnet 4.6</td>
+            <td>Gemini 2.5 Pro</td>
+            <td><strong style="color:var(--primary);">約 ¥30〜50</strong></td>
+            <td>約 ¥900〜1,500</td>
+            <td>約 ¥3,000〜5,000</td>
+          </tr>
+          <tr>
+            <td>💎 高品質モード</td>
+            <td>Claude Opus 4.7</td>
+            <td>Gemini 2.5 Pro</td>
+            <td><strong style="color:#92400e;">約 ¥100〜180</strong></td>
+            <td>約 ¥3,000〜5,400</td>
+            <td>約 ¥10,000〜18,000</td>
+          </tr>
+          <tr>
+            <td colspan="3" style="text-align:right;font-weight:600;">画像なし(本文のみ)の場合</td>
+            <td colspan="3" style="text-align:left;color:var(--muted);">上記から¥3〜10ほど安くなります</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 class="sub">コストに影響する3つのポイント</h3>
+      <div class="sec-grid">
+        <div class="sec-card">
+          <div class="ic">📏</div>
+          <h4>① 記事の長さ</h4>
+          <p>文字数が多いほどコストは増えます。2000文字なら半額、6000文字なら1.5倍ほどが目安です。</p>
+        </div>
+        <div class="sec-card">
+          <div class="ic">🖼️</div>
+          <h4>② 画像を作るかどうか</h4>
+          <p>サムネイル画像の生成は1枚あたり数円〜十数円。画像なしに設定すれば、そのぶん節約できます。</p>
+        </div>
+        <div class="sec-card">
+          <div class="ic">🎨</div>
+          <h4>③ ブランド設定の量</h4>
+          <p>NGワード・読者像・文体ルールなどを細かく設定するほど、AIに渡す情報が増え、わずかにコストが上がります。</p>
+        </div>
+        <div class="sec-card">
+          <div class="ic">🛡️</div>
+          <h4>④ 暴走防止のブレーキ</h4>
+          <p>1日あたりの上限を設定できるので、想定外の請求は発生しません。上限に達したら自動でストップします。</p>
+        </div>
+      </div>
+
+      <div class="usecase">
+        <span class="label">予算の決め方の例</span>
+        <h5>「月3万円までで、なるべく多く更新したい」場合</h5>
+        <p>
+          バランスモード(1記事¥40前後)であれば、月750本ほど作れる計算です。<br>
+          「専門記事を月50本だけ」なら、高品質モード(1記事¥150前後)で月¥7,500ほどの予算になります。<br>
+          実際の運用では、メインは節約モード/重要記事だけ高品質モード、といった<strong>記事ごとのモード切り替え</strong>もできます。
+        </p>
+      </div>
+
+      <div class="note tip">
+        <strong>ご注意:</strong> 上記の金額はAI各社の料金体系をもとにした<em>目安</em>です。実際の請求額は記事の文字数・プロンプトの長さ・生成回数によって変動します。料金が改定された場合は、改めてご案内します。
+      </div>
+    </section>
+
+    <!-- Flow -->
+    <section id="flow">
+      <h2 class="sec"><span class="ic">🔄</span>使う流れ</h2>
+      <p class="sec-lead">登録から最初の記事公開まで、最短30分。プログラミングの知識は一切いりません。</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <span class="ic">📧</span>
+          <h5>登録</h5>
+          <p>メールアドレスとパスワードを入力。Googleアカウントでも登録できます。</p>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <span class="ic">🔗</span>
+          <h5>サイトを繋ぐ</h5>
+          <p>WordPressのURLと専用パスワードを入力。接続テストは自動です。</p>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <span class="ic">⌨️</span>
+          <h5>キーワードを登録</h5>
+          <p>記事のキーワードと公開時刻を入力。一括取り込みもできます。</p>
+        </div>
+        <div class="step">
+          <div class="num">4</div>
+          <span class="ic">🎉</span>
+          <h5>あとは待つだけ</h5>
+          <p>指定した時刻になると、AIが記事を書いて自動公開します。</p>
+        </div>
+      </div>
+
+      <div class="usecase">
+        <span class="label">ご利用イメージ</span>
+        <h5>たとえば、こんな使い方</h5>
+        <p>
+          月曜日の夜にカレンダーを開き、「副業の節税」「ふるさと納税のコツ」など、その月に書きたいテーマを30個まとめて入力。
+          公開時刻は「毎週月・水・金の朝9時」に設定。<br>
+          あとは何もしなくても、1ヶ月にわたって自動的に記事が公開され続けます。
+        </p>
+      </div>
+    </section>
+
+    <!-- Plan -->
+    <section id="plan">
+      <h2 class="sec"><span class="ic">💴</span>料金プラン</h2>
+      <p class="sec-lead">サイト数や記事の本数に応じて、4つのプランからお選びいただけます。途中でプラン変更も可能です。</p>
+
+      <table class="plan-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Starter<br><small style="font-weight:500;color:var(--muted);">個人ブロガー向け</small></th>
+            <th class="popular">Pro<br><small style="font-weight:500;opacity:0.85;">中小企業向け</small></th>
+            <th>Agency<br><small style="font-weight:500;color:var(--muted);">代理店向け</small></th>
+            <th>Enterprise<br><small style="font-weight:500;color:var(--muted);">大企業向け</small></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>月額</td>
+            <td><div class="price">¥2,980<span class="u">/月</span></div></td>
+            <td class="popular-col"><div class="price">¥9,800<span class="u">/月</span></div></td>
+            <td><div class="price">¥29,800<span class="u">/月</span></div></td>
+            <td><div class="price">個別<span class="u">見積</span></div></td>
+          </tr>
+          <tr>
+            <td>記事数(月)</td>
+            <td>30本まで</td>
+            <td class="popular-col">120本まで</td>
+            <td>500本まで</td>
+            <td>無制限</td>
+          </tr>
+          <tr>
+            <td>つなげるサイト数</td>
+            <td>1サイト</td>
+            <td class="popular-col">3サイト</td>
+            <td>20サイト</td>
+            <td>無制限</td>
+          </tr>
+          <tr>
+            <td>メンバー数</td>
+            <td>2人まで</td>
+            <td class="popular-col">5人まで</td>
+            <td>無制限</td>
+            <td>無制限</td>
+          </tr>
+          <tr>
+            <td>サムネ画像の自動生成</td>
+            <td class="yes">○</td>
+            <td class="popular-col yes">○</td>
+            <td class="yes">○</td>
+            <td class="yes">○</td>
+          </tr>
+          <tr>
+            <td>サイトごとのトーン設定</td>
+            <td class="no">−</td>
+            <td class="popular-col yes">○</td>
+            <td class="yes">○</td>
+            <td class="yes">○</td>
+          </tr>
+          <tr>
+            <td>役割ごとの権限管理</td>
+            <td class="no">−</td>
+            <td class="no">−</td>
+            <td class="yes">○</td>
+            <td class="yes">○</td>
+          </tr>
+          <tr>
+            <td>操作ログ閲覧</td>
+            <td class="no">−</td>
+            <td class="no">−</td>
+            <td>90日分</td>
+            <td>1年分</td>
+          </tr>
+          <tr>
+            <td>会社のSSOと連携</td>
+            <td class="no">−</td>
+            <td class="no">−</td>
+            <td class="no">−</td>
+            <td class="yes">○</td>
+          </tr>
+          <tr>
+            <td>稼働率の保証(SLA)</td>
+            <td class="no">−</td>
+            <td class="no">−</td>
+            <td>99.9%</td>
+            <td>99.95%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        <strong>14日間の無料お試しあり。</strong> クレジットカードの登録は不要です。3記事まで無料で生成して、使い心地をお試しいただけます。
+      </div>
+    </section>
+
+    <!-- Security -->
+    <section id="security">
+      <h2 class="sec"><span class="ic">🛡️</span>安心のしくみ</h2>
+      <p class="sec-lead">大切なサイトの情報をお預かりするので、セキュリティと運用には特に気を配っています。</p>
+
+      <div class="sec-grid">
+        <div class="sec-card">
+          <div class="ic">🔐</div>
+          <h4>パスワードは暗号化して保管</h4>
+          <p>WordPressのパスワードや各種情報は、すべて暗号化された状態でお預かりします。万が一データが流出しても、中身は読み取れません。</p>
+          <div class="ex"><strong>たとえると:</strong> 銀行の金庫にしまうイメージ。鍵を持っているのは弊社のシステムだけ。</div>
+        </div>
+        <div class="sec-card">
+          <div class="ic">🚧</div>
+          <h4>他のお客様の情報とは完全に分離</h4>
+          <p>お客様ごとに別の引き出しに情報が入っているイメージです。間違って他社の情報が見えてしまうことが起きないよう、システムの仕組みで強制しています。</p>
+          <div class="ex"><strong>テスト:</strong> 開発時に「他人のデータが見えないか?」のチェックを毎回自動で実施。</div>
+        </div>
+        <div class="sec-card">
+          <div class="ic">📡</div>
+          <h4>通信はすべて暗号化</h4>
+          <p>お客様と弊社サーバーの間のやり取りは、すべて暗号化されています。途中で情報を盗み見られる心配はありません。</p>
+        </div>
+        <div class="sec-card">
+          <div class="ic">⚡</div>
+          <h4>使いすぎ防止のブレーキ</h4>
+          <p>AIの利用料が思った以上にかかってしまわないよう、1日あたりの上限を設定。想定を超えたら自動でストップします。</p>
+        </div>
+        <div class="sec-card">
+          <div class="ic">💾</div>
+          <h4>毎日のバックアップ</h4>
+          <p>データベースは毎日自動でバックアップ。30日前までさかのぼって復元できる仕組みです。</p>
+        </div>
+        <div class="sec-card">
+          <div class="ic">🔔</div>
+          <h4>24時間の自動監視</h4>
+          <p>システムに異常があれば、すぐに担当者へ通知が届きます。お客様より先に弊社が気づき、対応します。</p>
+        </div>
+      </div>
+
+      <h3 class="sub">どれくらい速い? どれくらい止まらない?</h3>
+      <table class="plan-table" style="margin-top:8px;">
+        <thead>
+          <tr>
+            <th style="width:60%;">項目</th>
+            <th>目安</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>記事1本が生成されるまでの時間</td><td>約2分以内(95%のケース)</td></tr>
+          <tr><td>画面の表示の速さ</td><td>0.2秒以下(95%のケース)</td></tr>
+          <tr><td>サービスの稼働率</td><td>月99.9%以上を目標(=月43分以内の停止)</td></tr>
+          <tr><td>計画停止(メンテナンス)</td><td>月1回まで、7日前に事前告知</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Roadmap -->
+    <section id="roadmap">
+      <h2 class="sec"><span class="ic">🗺️</span>これからの予定</h2>
+      <p class="sec-lead">サービスは3段階に分けて、できることを少しずつ増やしていきます。</p>
+
+      <div class="roadmap">
+        <div class="item">
+          <div class="when">まず最初に提供(0〜3ヶ月)</div>
+          <h4>基本機能の提供</h4>
+          <p>会員登録・WordPress接続・記事の自動生成と公開・月額課金など、サービスとして使い始めるために必要な機能を一通りご用意します。</p>
+        </div>
+        <div class="item future">
+          <div class="when">次の段階(4〜6ヶ月)</div>
+          <h4>複数サイト・チーム対応の強化</h4>
+          <p>複数サイトの一括管理、メンバーの役割管理、サイトごとの文体細かい設定、使用量グラフ、Google連携、二段階認証など、ビジネスでの活用に必要な機能を追加します。</p>
+        </div>
+        <div class="item future">
+          <div class="when">大企業向け(7〜12ヶ月)</div>
+          <h4>エンタープライズ対応</h4>
+          <p>会社のシングルサインオンとの連携、専用環境のご提供、独自AIキーの持ち込み、外部ツール(Zapier・Shopifyなど)との連携、セキュリティ認証(ISMS / SOC2)の取得などを進めていきます。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq">
+      <h2 class="sec"><span class="ic">❓</span>よくある質問</h2>
+
+      <details open>
+        <summary>WordPressにプラグインを入れる必要はありますか?</summary>
+        <div>不要です。WordPressが標準でもっている機能(REST APIとアプリケーションパスワード)を使うので、サイト側に新しいプラグインを入れる必要はありません。WordPress 5.6以降であればすぐに使えます。</div>
+      </details>
+
+      <details>
+        <summary>生成された記事は、自分のサイトで自由に使えますか?</summary>
+        <div>はい、生成された記事の権利はお客様に帰属します。ただし、医療・薬機法・金融など内容にデリケートさが求められる分野では、念のため人の目でチェックしてから公開することをおすすめします。</div>
+      </details>
+
+      <details>
+        <summary>記事数が上限を超えたら、どうなりますか?</summary>
+        <div>その時点で記事の自動生成が一時停止します。Proプランは「1記事あたり+80円」で続けるか、上位プランへ切り替えていただくか選べます。Starterプランは翌月のリセットまでお待ちいただくか、プランをアップグレードしていただきます。<br>意図せず大量に課金されることはありません。</div>
+      </details>
+
+      <details>
+        <summary>AIが書いた記事の品質は大丈夫ですか?</summary>
+        <div>サイトごとの文体・読者層・NGワードを事前に設定できるため、貴社サイトのトーンに合った記事を生成します。気になる場合は「下書き」として保存し、人がチェックしてから公開する運用も可能です。</div>
+      </details>
+
+      <details>
+        <summary>AIモデルは途中で変更できますか?</summary>
+        <div>はい、いつでも変更できます。サイト単位や記事単位で「節約モード」「バランスモード」「高品質モード」を切り替えられるので、たとえば「メインは節約モードで運用、重要記事だけ高品質モードで生成」といった使い分けも可能です。</div>
+      </details>
+
+      <details>
+        <summary>解約したいときは?</summary>
+        <div>管理画面からいつでも解約できます。解約後30日間はデータを保持し、その間であれば復元可能です。30日を過ぎると完全に削除されます。GDPRや個人情報保護法に基づくデータ削除のご依頼にも対応します。</div>
+      </details>
+
+      <details>
+        <summary>サポートはありますか?</summary>
+        <div>Starterプラン以上で、メールサポート(営業日24時間以内に返信)をご提供します。Agencyプラン以上は優先サポート、Enterpriseプランは専用チャンネル+専任担当者をご用意します。</div>
+      </details>
+
+      <details>
+        <summary>会社のセキュリティ要件が厳しいのですが、対応できますか?</summary>
+        <div>Enterpriseプランでは、会社のシングルサインオンとの連携、専用環境のご提供、SLA保証、各種セキュリティ認証への対応などをご相談できます。まずは個別にご要件をお聞かせください。</div>
+      </details>
+
+      <details>
+        <summary>自社のAPIキーを使うことはできますか?</summary>
+        <div>はい、Phase 3でご提供予定です(BYOK機能)。自社で契約しているAnthropicやGoogleのAIキーを持ち込んでいただければ、AI利用料を自社契約側に切り替えることができます。Enterpriseプランで先行ご提供します。</div>
+      </details>
+    </section>
+
+  </main>
+</div>
+</body>
+</html>

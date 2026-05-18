@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Blog Auto v2 仕様書 — マルチサイト × 自動キーワード × MySQL/TypeORM</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --code-bg: #f1f5f9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .container { max-width: 1080px; margin: 0 auto; padding: 48px 32px 80px; }
+  header.hero {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white; padding: 64px 32px; margin-bottom: 48px;
+  }
+  header.hero .inner { max-width: 1080px; margin: 0 auto; }
+  header.hero h1 { font-size: 32px; margin: 0 0 8px; font-weight: 700; }
+  header.hero p.lead { margin: 0; opacity: 0.9; font-size: 16px; }
+  header.hero .meta { margin-top: 24px; display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; opacity: 0.85; }
+  h2 { font-size: 24px; margin: 56px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  h3 { font-size: 18px; margin: 32px 0 12px; color: var(--primary-dark); }
+  h4 { font-size: 15px; margin: 20px 0 8px; color: var(--text); }
+  p, li { font-size: 14px; }
+  code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px;
+  }
+  pre {
+    background: var(--code-bg); padding: 16px; border-radius: 8px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.55;
+  }
+  pre code { background: transparent; padding: 0; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 16px 0;
+    background: var(--card); border-radius: 8px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td {
+    text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border);
+    font-size: 13.5px; vertical-align: top;
+  }
+  th {
+    background: #f1f5f9; font-weight: 600; font-size: 12.5px;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  tr:last-child td { border-bottom: none; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 16px 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 16px 0; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; margin-right: 6px; }
+  .pill.must { background: #fee2e2; color: var(--danger); }
+  .pill.should { background: #fef3c7; color: var(--warning); }
+  .pill.could { background: #dcfce7; color: var(--success); }
+  .pill.phase { background: #dbeafe; color: var(--primary-dark); }
+  .pill.new { background: #ede9fe; color: #6d28d9; }
+  .toc { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 48px; }
+  .toc h2 { margin: 0 0 12px; border: none; font-size: 16px; }
+  .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+  .toc li { margin: 4px 0; font-size: 13.5px; }
+  .toc a { color: var(--primary); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .gap-list { background: #fffbeb; border-left: 4px solid var(--warning); padding: 16px 20px; border-radius: 4px; margin: 12px 0; }
+  .gap-list h4 { color: var(--warning); margin-top: 0; }
+  .info-box { background: #eff6ff; border-left: 4px solid var(--primary); padding: 16px 20px; border-radius: 4px; margin: 12px 0; }
+  .info-box h4 { color: var(--primary-dark); margin-top: 0; }
+  .danger-box { background: #fef2f2; border-left: 4px solid var(--danger); padding: 16px 20px; border-radius: 4px; margin: 12px 0; }
+  .danger-box h4 { color: var(--danger); margin-top: 0; }
+  .arch-diagram {
+    background: var(--code-bg); padding: 24px; border-radius: 8px;
+    font-family: "SF Mono", Menlo, monospace; font-size: 12px;
+    line-height: 1.5; overflow-x: auto; white-space: pre;
+  }
+  ul.checklist { list-style: none; padding-left: 0; }
+  ul.checklist li { padding: 4px 0 4px 24px; position: relative; }
+  ul.checklist li::before { content: "□"; position: absolute; left: 0; color: var(--muted); font-weight: bold; }
+  .footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; text-align: center; }
+  .er-diagram { font-family: "SF Mono", Menlo, monospace; font-size: 11.5px; line-height: 1.5; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-x: auto; white-space: pre; }
+  .badge-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 16px; }
+  .col-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .col-2 { grid-template-columns: 1fr; } .toc ol { columns: 1; } }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="inner">
+    <h1>Blog Auto v2 仕様書</h1>
+    <p class="lead">マルチサイト（5サイト）× 自動キーワード生成 × 28日 GSC フィードバック × MySQL/TypeORM 移行</p>
+    <div class="meta">
+      <span>バージョン: 2.0.0</span>
+      <span>作成日: 2026-05-15</span>
+      <span>対象リポジトリ: <code>blog-auto</code></span>
+      <span>主要スタック: NestJS / TypeORM / MySQL 8 / Claude / WordPress REST / GSC API</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- ─────────────── TOC ─────────────── -->
+<nav class="toc">
+  <h2>目次</h2>
+  <ol>
+    <li><a href="#overview">1. 概要 / ゴール</a></li>
+    <li><a href="#scope">2. スコープ / 現状とのギャップ</a></li>
+    <li><a href="#architecture">3. アーキテクチャ</a></li>
+    <li><a href="#data-model">4. データモデル（MySQL / TypeORM）</a></li>
+    <li><a href="#modules">5. モジュール構成</a></li>
+    <li><a href="#keyword-planning">6. 自動キーワード生成（28日サイクル）</a></li>
+    <li><a href="#daily-run">7. 日次実行フロー（5サイト同時投稿）</a></li>
+    <li><a href="#migration">8. Excel → MySQL 移行</a></li>
+    <li><a href="#scheduler">9. Cloud Scheduler 構成</a></li>
+    <li><a href="#api">10. API 仕様</a></li>
+    <li><a href="#env">11. 環境変数</a></li>
+    <li><a href="#ops">12. 運用 / 監視 / リカバリ</a></li>
+    <li><a href="#risks">13. リスクと未決事項</a></li>
+    <li><a href="#roadmap">14. ロードマップ / 実装順</a></li>
+  </ol>
+</nav>
+
+<!-- ─────────────── 1. 概要 ─────────────── -->
+<section id="overview">
+  <h2>1. 概要 / ゴール</h2>
+  <p>
+    既存の <code>blog-auto</code>（NestJS + Claude + WordPress + GSC + GCS Excel）を
+    <strong>5サイト同時運用</strong> と <strong>キーワードの自動生成</strong> に拡張し、
+    永続化層を <strong>GCS 上の Excel から MySQL + TypeORM</strong> に置き換える。
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <h4>到達したい状態</h4>
+      <ul>
+        <li>毎日、登録された <strong>5つの WordPress サイト</strong> に 1本ずつ下書きが投稿される</li>
+        <li>キーワードは <strong>28日に1度、GSC データをもとに Claude が自動生成</strong> し、向こう28日分のスケジュールに自動投入</li>
+        <li>運用者は <strong>承認 UI で keyword を上書き / 拒否</strong> できる（フェイルセーフ）</li>
+        <li>データはすべて <strong>MySQL</strong> に集約、TypeORM の Entity / Migration で管理</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>非ゴール（v2 では扱わない）</h4>
+      <ul>
+        <li>WordPress 以外の CMS（Ghost / Wix など）</li>
+        <li>投稿の自動公開（v2 までは <code>status=draft</code> のまま）</li>
+        <li>多言語化（日本語のみ）</li>
+        <li>本格的なマルチテナント SaaS 化（テナント分離は v3 以降）</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── 2. スコープ ─────────────── -->
+<section id="scope">
+  <h2>2. スコープ / 現状とのギャップ</h2>
+  <table>
+    <thead>
+      <tr><th style="width: 26%;">項目</th><th style="width: 32%;">現状 (v1)</th><th style="width: 32%;">v2 目標</th><th>変更</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>投稿先サイト数</td><td>1（<code>WORDPRESS_URL</code> 固定）</td><td>5サイト（テーブル管理）</td><td><span class="pill must">MUST</span></td></tr>
+      <tr><td>キーワード入力</td><td>UI から手動 upsert</td><td>GSC + Claude による自動生成（28日分）</td><td><span class="pill must">MUST</span></td></tr>
+      <tr><td>スケジュール永続化</td><td>GCS Excel 1ファイル</td><td>MySQL <code>schedule_entries</code> テーブル</td><td><span class="pill must">MUST</span></td></tr>
+      <tr><td>実行履歴</td><td>同 Excel 行の <code>lastRun*</code> 列</td><td><code>run_history</code> テーブル（1スケジュール:N 履歴）</td><td><span class="pill must">MUST</span></td></tr>
+      <tr><td>GSC データ</td><td>都度 API 取得（保存なし）</td><td><code>gsc_snapshots</code> + <code>gsc_query_rows</code> に履歴保持</td><td><span class="pill should">SHOULD</span></td></tr>
+      <tr><td>キーワード承認</td><td>—</td><td>pending → approved の 1段階レビュー</td><td><span class="pill should">SHOULD</span></td></tr>
+      <tr><td>Cloud Scheduler</td><td><code>run-today</code> 1本</td><td><code>run-today</code> + <code>plan-next-cycle</code> 2本</td><td><span class="pill must">MUST</span></td></tr>
+      <tr><td>ストレージ</td><td>GCS Excel</td><td>MySQL（Cloud SQL）<br>※ Excel エクスポートは <code>/export</code> で継続提供</td><td><span class="pill new">NEW</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─────────────── 3. アーキテクチャ ─────────────── -->
+<section id="architecture">
+  <h2>3. アーキテクチャ</h2>
+  <div class="arch-diagram">
+┌──────────────────────────────────────────────────────────────────────┐
+│                          Cloud Scheduler                             │
+│  ┌──────────────────────┐         ┌──────────────────────────┐       │
+│  │ daily 09:00 JST      │         │ every 28d 03:00 JST      │       │
+│  │ POST /schedules/     │         │ POST /keywords/          │       │
+│  │      run-today       │         │      plan-next-cycle     │       │
+│  └──────────┬───────────┘         └──────────┬───────────────┘       │
+└─────────────┼────────────────────────────────┼───────────────────────┘
+              │ OIDC                           │ OIDC
+              ▼                                ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Cloud Run: blog-auto                          │
+│                                                                      │
+│  ┌────────────────┐  ┌─────────────────┐  ┌──────────────────────┐   │
+│  │ SchedulerSvc   │  │ KeywordPlanner  │  │ SearchConsoleSvc     │   │
+│  │ runForDate()   │  │ planNextCycle() │  │ searchAnalytics...() │   │
+│  └────────┬───────┘  └────────┬────────┘  └──────────┬───────────┘   │
+│           │                   │                      │               │
+│           ▼                   ▼                      ▼               │
+│  ┌────────────────┐  ┌─────────────────┐  ┌──────────────────────┐   │
+│  │ BlogGenerator  │  │ Anthropic SDK   │  │ Google OAuth2Client  │   │
+│  │ (Claude 4.6)   │  │                 │  │                      │   │
+│  └────────┬───────┘  └─────────────────┘  └──────────────────────┘   │
+│           │                                                          │
+│           ▼ per site                                                 │
+│  ┌────────────────┐                                                  │
+│  │ WordpressSvc   │ ──► site#1 .. site#5  (REST API / draft)         │
+│  └────────────────┘                                                  │
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │                       TypeORM DataSource                       │  │
+│  │  sites / schedule_entries / run_history / keyword_plans /      │  │
+│  │  gsc_snapshots / gsc_query_rows                                │  │
+│  └─────────────────────┬──────────────────────────────────────────┘  │
+└────────────────────────┼─────────────────────────────────────────────┘
+                         ▼
+                ┌──────────────────┐
+                │   Cloud SQL      │
+                │   MySQL 8        │
+                └──────────────────┘
+  </div>
+
+  <div class="info-box">
+    <h4>キーポイント</h4>
+    <ul>
+      <li>1 Cloud Run サービス / 1 MySQL インスタンスに集約（マルチテナント化は後段）</li>
+      <li>Cloud Run → Cloud SQL は <strong>Cloud SQL Auth Proxy / Private IP</strong> 経由</li>
+      <li>5サイトの WordPress 認証情報は <code>sites</code> テーブルに保存（<strong>Application Password は Cloud KMS で暗号化</strong> or Secret Manager 参照）</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─────────────── 4. データモデル ─────────────── -->
+<section id="data-model">
+  <h2>4. データモデル（MySQL / TypeORM）</h2>
+
+  <h3>4.1 ER 図</h3>
+  <div class="er-diagram">
+┌──────────────────────┐         ┌──────────────────────────┐
+│ sites                │ 1     N │ schedule_entries         │
+│──────────────────────│─────────│──────────────────────────│
+│ id (PK)              │         │ id (PK)                  │
+│ slug (UQ)            │         │ site_id (FK → sites.id)  │
+│ name                 │         │ scheduled_date           │
+│ wp_url               │         │ status (pending/         │
+│ wp_username          │         │         approved/        │
+│ wp_app_pw_encrypted  │         │         skipped)         │
+│ gsc_site_url         │         │ keyword1 / 2 / 3         │
+│ default_article_type │         │ topic                    │
+│ default_categories   │         │ article_type             │
+│ default_tags         │         │ category_names (json)    │
+│ persona (text)       │         │ tag_names (json)         │
+│ active (bool)        │         │ inline_image_count       │
+│ created_at           │         │ source (manual/auto)     │
+│ updated_at           │         │ plan_id (FK, nullable)   │
+└──────────┬───────────┘         │ created_at / updated_at  │
+           │                     └───────┬──────────────────┘
+           │ 1                           │ 1
+           │                             │
+           │ N                           │ N
+┌──────────▼───────────┐         ┌───────▼──────────────────┐
+│ keyword_plans        │ 1     N │ run_history              │
+│──────────────────────│         │──────────────────────────│
+│ id (PK)              │         │ id (PK)                  │
+│ site_id (FK)         │         │ schedule_entry_id (FK)   │
+│ cycle_start          │         │ status (success/failed)  │
+│ cycle_end            │         │ ran_at                   │
+│ status (draft/       │         │ wp_post_id               │
+│         approved)    │         │ wp_post_link             │
+│ snapshot_id (FK)     │         │ wp_post_title            │
+│ generated_by         │         │ error                    │
+│ approved_by          │         │ duration_ms              │
+│ approved_at          │         └──────────────────────────┘
+│ raw_response (json)  │
+│ created_at           │
+└──────────┬───────────┘
+           │
+           │ N : 1
+           ▼
+┌──────────────────────┐ 1     N ┌──────────────────────────┐
+│ gsc_snapshots        │─────────│ gsc_query_rows           │
+│──────────────────────│         │──────────────────────────│
+│ id (PK)              │         │ id (PK)                  │
+│ site_id (FK)         │         │ snapshot_id (FK)         │
+│ start_date / end_date│         │ query                    │
+│ row_count            │         │ page (nullable)          │
+│ taken_at             │         │ clicks / impressions     │
+│ data_state           │         │ ctr / position           │
+└──────────────────────┘         │ INDEX (snapshot_id,      │
+                                 │        impressions DESC) │
+                                 └──────────────────────────┘
+  </div>
+
+  <h3>4.2 主要 Entity（TypeORM）</h3>
+
+  <h4>Site</h4>
+<pre><code>// src/sites/site.entity.ts
+@Entity({ name: 'sites' })
+export class Site {
+  @PrimaryGeneratedColumn() id!: number;
+
+  @Column({ unique: true, length: 64 })  slug!: string;          // 'gakkiou', ...
+  @Column({ length: 128 })                name!: string;
+
+  @Column({ name: 'wp_url' })             wpUrl!: string;
+  @Column({ name: 'wp_username' })        wpUsername!: string;
+  @Column({ name: 'wp_app_pw_encrypted', type: 'text' })
+                                          wpAppPwEncrypted!: string;  // KMS で暗号化
+
+  @Column({ name: 'gsc_site_url' })       gscSiteUrl!: string;
+  @Column({ name: 'default_article_type', type: 'enum', enum: ArticleType,
+            default: ArticleType.SEO })   defaultArticleType!: ArticleType;
+  @Column({ name: 'default_categories', type: 'json', nullable: true })
+                                          defaultCategories?: string[];
+  @Column({ name: 'default_tags', type: 'json', nullable: true })
+                                          defaultTags?: string[];
+
+  @Column({ type: 'text', nullable: true }) persona?: string;   // Claude 用のサイト人格
+  @Column({ default: true })              active!: boolean;
+
+  @CreateDateColumn({ name: 'created_at' }) createdAt!: Date;
+  @UpdateDateColumn({ name: 'updated_at' }) updatedAt!: Date;
+
+  @OneToMany(() => ScheduleEntry, (s) => s.site)  schedules!: ScheduleEntry[];
+  @OneToMany(() => KeywordPlan,   (p) => p.site)  keywordPlans!: KeywordPlan[];
+}</code></pre>
+
+  <h4>ScheduleEntry</h4>
+<pre><code>// src/scheduler/schedule-entry.entity.ts
+export type ScheduleStatus = 'pending' | 'approved' | 'skipped';
+export type ScheduleSource = 'manual' | 'auto';
+
+@Entity({ name: 'schedule_entries' })
+@Unique(['site', 'scheduledDate'])     // 1サイト × 1日 = 1エントリ
+export class ScheduleEntry {
+  @PrimaryGeneratedColumn() id!: number;
+
+  @ManyToOne(() => Site, (s) => s.schedules, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'site_id' })       site!: Site;
+
+  @Column({ name: 'scheduled_date', type: 'date' })  scheduledDate!: string; // 'YYYY-MM-DD'
+
+  @Column({ type: 'enum', enum: ['pending', 'approved', 'skipped'],
+            default: 'pending' })        status!: ScheduleStatus;
+
+  @Column({ length: 100 })                keyword1!: string;
+  @Column({ length: 100 })                keyword2!: string;
+  @Column({ length: 100 })                keyword3!: string;
+
+  @Column({ type: 'text', nullable: true })   topic?: string;
+  @Column({ name: 'article_type', type: 'enum', enum: ArticleType, nullable: true })
+                                          articleType?: ArticleType;
+  @Column({ name: 'category_names', type: 'json', nullable: true })
+                                          categoryNames?: string[];
+  @Column({ name: 'tag_names', type: 'json', nullable: true })
+                                          tagNames?: string[];
+  @Column({ name: 'inline_image_count', type: 'tinyint', nullable: true })
+                                          inlineImageCount?: number;
+
+  @Column({ type: 'enum', enum: ['manual', 'auto'], default: 'manual' })
+                                          source!: ScheduleSource;
+
+  @ManyToOne(() => KeywordPlan, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'plan_id' })       plan?: KeywordPlan;
+
+  @OneToMany(() => RunHistory, (r) => r.scheduleEntry) runs!: RunHistory[];
+
+  @CreateDateColumn({ name: 'created_at' }) createdAt!: Date;
+  @UpdateDateColumn({ name: 'updated_at' }) updatedAt!: Date;
+}</code></pre>
+
+  <h4>RunHistory</h4>
+<pre><code>// src/scheduler/run-history.entity.ts
+@Entity({ name: 'run_history' })
+@Index(['scheduleEntry', 'ranAt'])
+export class RunHistory {
+  @PrimaryGeneratedColumn() id!: number;
+
+  @ManyToOne(() => ScheduleEntry, (s) => s.runs, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'schedule_entry_id' })  scheduleEntry!: ScheduleEntry;
+
+  @Column({ type: 'enum', enum: ['success', 'failed'] })  status!: 'success' | 'failed';
+  @Column({ name: 'ran_at', type: 'datetime' })           ranAt!: Date;
+
+  @Column({ name: 'wp_post_id',    nullable: true })      wpPostId?: number;
+  @Column({ name: 'wp_post_link',  nullable: true })      wpPostLink?: string;
+  @Column({ name: 'wp_post_title', nullable: true })      wpPostTitle?: string;
+  @Column({ type: 'text', nullable: true })               error?: string;
+  @Column({ name: 'duration_ms', nullable: true })        durationMs?: number;
+}</code></pre>
+
+  <h4>KeywordPlan</h4>
+<pre><code>// src/keyword-planner/keyword-plan.entity.ts
+@Entity({ name: 'keyword_plans' })
+@Index(['site', 'cycleStart'])
+export class KeywordPlan {
+  @PrimaryGeneratedColumn() id!: number;
+
+  @ManyToOne(() => Site, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'site_id' })           site!: Site;
+
+  @Column({ name: 'cycle_start', type: 'date' })   cycleStart!: string;
+  @Column({ name: 'cycle_end',   type: 'date' })   cycleEnd!: string;
+
+  @Column({ type: 'enum', enum: ['draft', 'approved'], default: 'draft' })
+                                              status!: 'draft' | 'approved';
+
+  @ManyToOne(() => GscSnapshot, { nullable: true })
+  @JoinColumn({ name: 'snapshot_id' })       snapshot?: GscSnapshot;
+
+  @Column({ name: 'generated_by', length: 64, default: 'claude-sonnet-4-6' })
+                                              generatedBy!: string;
+  @Column({ name: 'approved_by', length: 128, nullable: true })  approvedBy?: string;
+  @Column({ name: 'approved_at', type: 'datetime', nullable: true }) approvedAt?: Date;
+
+  @Column({ name: 'raw_response', type: 'json', nullable: true })   rawResponse?: unknown;
+
+  @CreateDateColumn({ name: 'created_at' }) createdAt!: Date;
+}</code></pre>
+
+  <h4>GscSnapshot / GscQueryRow</h4>
+<pre><code>// src/search-console/gsc-snapshot.entity.ts
+@Entity({ name: 'gsc_snapshots' })
+export class GscSnapshot {
+  @PrimaryGeneratedColumn() id!: number;
+  @ManyToOne(() => Site, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'site_id' })  site!: Site;
+  @Column({ name: 'start_date', type: 'date' }) startDate!: string;
+  @Column({ name: 'end_date',   type: 'date' }) endDate!: string;
+  @Column({ name: 'row_count' })                rowCount!: number;
+  @Column({ name: 'taken_at', type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+                                                takenAt!: Date;
+  @Column({ name: 'data_state', length: 16, default: 'final' }) dataState!: string;
+
+  @OneToMany(() => GscQueryRow, (r) => r.snapshot) rows!: GscQueryRow[];
+}
+
+@Entity({ name: 'gsc_query_rows' })
+@Index(['snapshot', 'impressions'])
+export class GscQueryRow {
+  @PrimaryGeneratedColumn() id!: number;
+  @ManyToOne(() => GscSnapshot, (s) => s.rows, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'snapshot_id' })  snapshot!: GscSnapshot;
+
+  @Column({ length: 255 })                    query!: string;
+  @Column({ length: 512, nullable: true })    page?: string;
+  @Column()                                   clicks!: number;
+  @Column()                                   impressions!: number;
+  @Column({ type: 'float' })                  ctr!: number;
+  @Column({ type: 'float' })                  position!: number;
+}</code></pre>
+
+  <h3>4.3 インデックス / 制約一覧</h3>
+  <table>
+    <thead><tr><th>テーブル</th><th>種別</th><th>カラム</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td>sites</td><td>UNIQUE</td><td>slug</td><td>URL / API パス用の安定キー</td></tr>
+      <tr><td>schedule_entries</td><td>UNIQUE</td><td>(site_id, scheduled_date)</td><td>1サイト1日1本の制約</td></tr>
+      <tr><td>schedule_entries</td><td>INDEX</td><td>(scheduled_date, status)</td><td>日次実行クエリ <code>WHERE date = ? AND status = 'approved'</code></td></tr>
+      <tr><td>run_history</td><td>INDEX</td><td>(schedule_entry_id, ran_at)</td><td>最新実行履歴取得</td></tr>
+      <tr><td>keyword_plans</td><td>INDEX</td><td>(site_id, cycle_start)</td><td>サイト別の最新プラン取得</td></tr>
+      <tr><td>gsc_query_rows</td><td>INDEX</td><td>(snapshot_id, impressions DESC)</td><td>「インプ多 / クリック少」抽出</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─────────────── 5. モジュール構成 ─────────────── -->
+<section id="modules">
+  <h2>5. モジュール構成</h2>
+  <table>
+    <thead><tr><th>モジュール</th><th>状態</th><th>役割</th></tr></thead>
+    <tbody>
+      <tr><td><code>SitesModule</code></td><td><span class="pill new">NEW</span></td><td>5サイトの CRUD、認証情報の暗号化/復号、デフォルト値の解決</td></tr>
+      <tr><td><code>WordpressModule</code></td><td><span class="pill should">CHG</span></td><td>「サイト固定」→「<code>siteId</code> または <code>Site</code> を受け取る」ファクトリ方式に変更</td></tr>
+      <tr><td><code>BlogGeneratorModule</code></td><td><span class="pill should">CHG</span></td><td>Site の <code>persona</code> をプロンプトに織り込み、生成 → 当該サイトに投稿</td></tr>
+      <tr><td><code>SchedulerModule</code></td><td><span class="pill should">CHG</span></td><td>ストレージを Excel → TypeORM Repository に置換。<code>runForDate</code> は <strong>5サイト分</strong> 実行</td></tr>
+      <tr><td><code>KeywordPlannerModule</code></td><td><span class="pill new">NEW</span></td><td>28日サイクル：GSC スナップショット取得 → Claude にプラン生成依頼 → <code>keyword_plans</code> 保存 → 承認時に <code>schedule_entries</code> 一括 upsert</td></tr>
+      <tr><td><code>SearchConsoleModule</code></td><td><span class="pill should">CHG</span></td><td>取得結果を <code>gsc_snapshots</code> / <code>gsc_query_rows</code> に保存できるよう拡張</td></tr>
+      <tr><td><code>DatabaseModule</code></td><td><span class="pill new">NEW</span></td><td>TypeORM <code>DataSource</code> の集中設定。Migration は <code>typeorm-extension</code> ベース</td></tr>
+    </tbody>
+  </table>
+
+<pre><code>// src/database/database.module.ts
+@Module({
+  imports: [
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'mysql',
+        host: config.get('DB_HOST'),
+        port: +config.get('DB_PORT', 3306),
+        username: config.get('DB_USER'),
+        password: config.get('DB_PASSWORD'),
+        database: config.get('DB_NAME'),
+        entities: [Site, ScheduleEntry, RunHistory, KeywordPlan, GscSnapshot, GscQueryRow],
+        migrations: ['dist/migrations/*.js'],
+        migrationsRun: true,        // 起動時に未適用 migration を流す
+        synchronize: false,         // 本番では絶対 false
+        timezone: '+09:00',
+        charset: 'utf8mb4_unicode_ci',
+        extra: {
+          // Cloud SQL Auth Proxy を使う場合は socketPath 経由
+          socketPath: config.get('DB_SOCKET_PATH') || undefined,
+        },
+      }),
+    }),
+  ],
+})
+export class DatabaseModule {}</code></pre>
+</section>
+
+<!-- ─────────────── 6. 自動キーワード ─────────────── -->
+<section id="keyword-planning">
+  <h2>6. 自動キーワード生成（28日サイクル）</h2>
+
+  <h3>6.1 サイクル定義</h3>
+  <ul>
+    <li><strong>サイクル長:</strong> 28日（GSC の表示単位「過去28日」と一致）</li>
+    <li><strong>トリガ:</strong> 月1回、Cloud Scheduler の <code>plan-next-cycle</code> ジョブ</li>
+    <li><strong>対象期間:</strong> 「明日」から「明日 + 27日」までの <strong>28日 × 5サイト = 140エントリ</strong></li>
+    <li><strong>サイクル境界:</strong> 各 <code>KeywordPlan.cycleStart / cycleEnd</code> で表現（半開区間ではなく両端含む）</li>
+  </ul>
+
+  <h3>6.2 フロー</h3>
+  <div class="arch-diagram">
+[1] Cloud Scheduler → POST /keywords/plan-next-cycle
+            │
+            ▼
+[2] 全 active サイトを sites から取得 (5件)
+            │
+            ▼ サイトごとに並列
+[3] SearchConsoleSvc.fetchAndStore(site)
+       - GSC /searchAnalytics/query  (dims=['query','page'], 直近28日)
+       - INSERT gsc_snapshots / gsc_query_rows
+            │
+            ▼
+[4] KeywordPlannerSvc.generatePlan(site, snapshot)
+       - スナップショットから候補シードを抽出:
+           A. impressions ≥ 100 かつ ctr ≤ 1.0% のクエリ
+           B. position が 8〜20 の改善余地クエリ
+           C. 直近28日に投稿済みの記事と被らないクエリ
+       - Claude に投げて:
+           * 28日分 × 3キーワード を JSON で返させる
+           * 各日に topic / articleType / category も提案させる
+            │
+            ▼
+[5] INSERT keyword_plans (status='draft', raw_response=...)
+       + INSERT schedule_entries (status='pending', source='auto', plan_id=...)
+       ※ 既存 status='approved' のエントリは上書きしない
+            │
+            ▼
+[6] 通知（Slack / Email）：レビュー URL を送付
+            │
+            ▼
+[7] 運用者が UI で承認
+       → keyword_plans.status='approved'
+       → 配下の schedule_entries.status='pending' → 'approved' に一括更新
+  </div>
+
+  <h3>6.3 Claude へのプロンプト要点</h3>
+  <pre><code>あなたは {site.name}（ペルソナ: {site.persona}）の SEO 担当です。
+直近28日の Google Search Console データを以下に示します。
+これをもとに「次の28日間で書くべきブログ記事」のキーワードを 28 件提案してください。
+
+# 入力データ
+- 高インプ低 CTR クエリ Top 50:
+  - {query, impressions, ctr, position} × N
+- 順位 8〜20 の改善余地クエリ Top 50:
+  - ...
+- 直近28日に投稿済みの記事タイトル:
+  - ...
+
+# 制約
+- 1日 = 3つのキーワード（メイン + サブ × 2）
+- 既存記事との重複を避け、内部リンク候補となる関連トピックを優先
+- 28日分の article_type 分布: SEO 60%, QA 25%, RANKING 10%, REPAIR_REPORT 5%
+
+# 出力（厳密な JSON）
+{
+  "days": [
+    { "offset": 0, "keywords": ["...", "...", "..."], "topic": "...",
+      "articleType": "seo", "categoryNames": ["..."], "tagNames": ["..."] },
+    ... (28件)
+  ]
+}</code></pre>
+
+  <div class="info-box">
+    <h4>fail-safe ルール</h4>
+    <ul>
+      <li>Claude のレスポンスが 28件に満たない / JSON 破損 → <code>KeywordPlan.status='draft'</code> のまま即座に Slack 通知。schedule_entries は作らない。</li>
+      <li>同じキーワードが28日内で 2 回以上出現 → 警告ログ、運用者が手動修正できるよう <code>raw_response</code> を必ず保存。</li>
+      <li><code>plan-next-cycle</code> は冪等。同じ <code>cycleStart</code> で2度走っても <code>UNIQUE(site_id, cycle_start)</code> に追加して、新規プランを生成（既存プランは draft のまま残す or 上書きフラグで制御）。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─────────────── 7. 日次実行フロー ─────────────── -->
+<section id="daily-run">
+  <h2>7. 日次実行フロー（5サイト同時投稿）</h2>
+
+  <h3>7.1 シーケンス</h3>
+  <div class="arch-diagram">
+Cloud Scheduler (09:00 JST) ──POST /schedules/run-today──► SchedulerController
+                                                                │
+                                                                ▼
+                          repo.find({ scheduledDate: today, status: 'approved' })
+                                                                │
+                                                                ▼ for each (最大5件)
+                       ┌────────────────────────────────────────┴───────────────┐
+                       │ entry#1: site_A          ...        entry#5: site_E    │
+                       │   BlogGeneratorSvc.generateAndCreateDraft({site, ...}) │
+                       │     ├─ Claude (本文)                                   │
+                       │     ├─ 画像生成 × N (並列)                              │
+                       │     ├─ WP.uploadMedia (siteごとの認証)                 │
+                       │     └─ WP.createPost  (siteごとの認証)                 │
+                       │   INSERT run_history(status, wp_post_id, duration_ms) │
+                       └────────────────────────────────────────────────────────┘
+                                                                │
+                                                                ▼
+                                            レスポンス: { processed: 5, succeeded, failed }
+  </div>
+
+  <h3>7.2 並列度と分離</h3>
+  <ul>
+    <li>5サイト分は <strong><code>Promise.allSettled</code> で並列</strong>。1サイト失敗が他に波及しない。</li>
+    <li>Claude API のレート制限を考慮し、内部で <code>p-limit(concurrency=3)</code> 程度に絞る。</li>
+    <li>WP 投稿は <strong>サイトごとの認証情報</strong> を都度復号して使い、終わったらメモリから破棄。</li>
+  </ul>
+
+  <h3>7.3 リトライ</h3>
+  <ul>
+    <li><strong>1次リトライ:</strong> Cloud Scheduler のリトライ機能（最大3回、指数バックオフ）</li>
+    <li><strong>2次リトライ:</strong> <code>POST /schedules/run/:date</code> を手動で叩く（冪等：成功済みエントリはスキップ）</li>
+    <li>成功済みかどうかは「最新の <code>run_history.status='success'</code>」で判定</li>
+  </ul>
+</section>
+
+<!-- ─────────────── 8. 移行 ─────────────── -->
+<section id="migration">
+  <h2>8. Excel → MySQL 移行</h2>
+
+  <h3>8.1 マイグレーションスクリプト</h3>
+<pre><code>// scripts/migrate-from-excel.ts
+//   既存 GCS 上の schedules.xlsx を読み、デフォルト site (slug='gakkiou') に紐づけて
+//   schedule_entries / run_history に流し込む。
+//   ※ 既存データは丸ごと「manual / approved」として取り込む。
+//
+// 使い方:
+//   $ npx ts-node scripts/migrate-from-excel.ts --site gakkiou --dry-run
+//   $ npx ts-node scripts/migrate-from-excel.ts --site gakkiou --commit</code></pre>
+
+  <h3>8.2 ステップ</h3>
+  <ol>
+    <li>Cloud SQL インスタンス作成 / DB / ユーザ準備</li>
+    <li>TypeORM Migration を <code>npm run migration:run</code> で適用（空 DB）</li>
+    <li>初期 <code>sites</code> レコード 5件を <code>seeds/sites.ts</code> から投入</li>
+    <li><code>migrate-from-excel.ts --dry-run</code> で件数 / 警告を確認</li>
+    <li><code>--commit</code> で本番反映、終わったら旧 Excel を <code>schedules.xlsx.bak.YYYYMMDD</code> にリネーム</li>
+    <li>Cloud Run の env を切り替え、<code>SchedulerStorageService</code> 廃止 PR をマージ</li>
+  </ol>
+
+  <h3>8.3 ロールバック</h3>
+  <ul>
+    <li>旧 Excel は読み取り専用で残し、移行直後の MySQL ダンプを <code>gs://&lt;backup&gt;/db-pre-cutover.sql.gz</code> に保存</li>
+    <li>問題発生時は env を 1コミット前に revert（コードは Excel / DB 両対応のまま 1スプリント維持する）</li>
+  </ul>
+</section>
+
+<!-- ─────────────── 9. Scheduler ─────────────── -->
+<section id="scheduler">
+  <h2>9. Cloud Scheduler 構成</h2>
+  <table>
+    <thead><tr><th>ジョブ名</th><th>cron</th><th>呼び出し</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>blog-auto-run-today</code></td>
+        <td><code>0 9 * * *</code> (JST)</td>
+        <td>POST <code>/schedules/run-today</code></td>
+        <td>毎日 09:00 に当日分5サイトを実行</td>
+      </tr>
+      <tr>
+        <td><code>blog-auto-plan-next-cycle</code></td>
+        <td><code>0 3 1,29 * *</code> 相当 (28日周期)</td>
+        <td>POST <code>/keywords/plan-next-cycle</code></td>
+        <td>次の28日分のキーワードを生成（draft）</td>
+      </tr>
+    </tbody>
+  </table>
+  <p><small>※ cron では「28日ごと」は厳密に表現できないため、毎月1日に走らせて <code>cycle_start &gt; today</code> な未来プランがなければ生成、を採る運用が現実的。</small></p>
+</section>
+
+<!-- ─────────────── 10. API ─────────────── -->
+<section id="api">
+  <h2>10. API 仕様</h2>
+
+  <h3>10.1 Sites</h3>
+  <table>
+    <thead><tr><th>Method</th><th>Path</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td><code>/sites</code></td><td>全サイト一覧</td></tr>
+      <tr><td>GET</td><td><code>/sites/:slug</code></td><td>1サイト取得</td></tr>
+      <tr><td>POST</td><td><code>/sites</code></td><td>サイト追加（wp_app_pw は受信時に暗号化）</td></tr>
+      <tr><td>PATCH</td><td><code>/sites/:slug</code></td><td>更新（active 切替 / persona 編集など）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>10.2 Schedules</h3>
+  <table>
+    <thead><tr><th>Method</th><th>Path</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td><code>/schedules?siteSlug=&from=&to=</code></td><td>期間 + サイトでフィルタ</td></tr>
+      <tr><td>POST</td><td><code>/schedules</code></td><td>1件 upsert（手動）。<code>source='manual'</code></td></tr>
+      <tr><td>PATCH</td><td><code>/schedules/:id</code></td><td>status / keyword 編集</td></tr>
+      <tr><td>POST</td><td><code>/schedules/run-today</code></td><td>当日 approved を全サイト並列実行（OIDC）</td></tr>
+      <tr><td>POST</td><td><code>/schedules/run/:date</code></td><td>特定日を再実行（OIDC + 手動）</td></tr>
+      <tr><td>GET</td><td><code>/schedules/export.xlsx</code></td><td>互換のため Excel エクスポート</td></tr>
+    </tbody>
+  </table>
+
+  <h3>10.3 Keyword Planner</h3>
+  <table>
+    <thead><tr><th>Method</th><th>Path</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td>POST</td><td><code>/keywords/plan-next-cycle</code></td><td>Cloud Scheduler から叩く。全サイトの新プランを draft で作成</td></tr>
+      <tr><td>POST</td><td><code>/keywords/plan/:siteSlug</code></td><td>サイト単位で再生成</td></tr>
+      <tr><td>GET</td><td><code>/keywords/plans?siteSlug=&status=</code></td><td>プラン一覧</td></tr>
+      <tr><td>POST</td><td><code>/keywords/plans/:id/approve</code></td><td>承認 → 配下 schedule を approved に一括更新</td></tr>
+      <tr><td>POST</td><td><code>/keywords/plans/:id/reject</code></td><td>棄却 → 配下 schedule を skipped に</td></tr>
+    </tbody>
+  </table>
+
+  <h3>10.4 GSC</h3>
+  <table>
+    <thead><tr><th>Method</th><th>Path</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td>POST</td><td><code>/gsc/snapshots/:siteSlug</code></td><td>直近28日分を取得して保存</td></tr>
+      <tr><td>GET</td><td><code>/gsc/snapshots?siteSlug=</code></td><td>スナップショット一覧</td></tr>
+      <tr><td>GET</td><td><code>/gsc/snapshots/:id/export.xlsx</code></td><td>Excel ダウンロード</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─────────────── 11. 環境変数 ─────────────── -->
+<section id="env">
+  <h2>11. 環境変数</h2>
+<pre><code># ─── DB (NEW) ────────────────────────────────
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=blogauto
+DB_PASSWORD=
+DB_NAME=blogauto
+# Cloud SQL Auth Proxy 経由のとき
+DB_SOCKET_PATH=/cloudsql/PROJECT:REGION:INSTANCE
+
+# ─── KMS / Secret (NEW) ──────────────────────
+# WordPress Application Password 暗号化用
+KMS_KEY_NAME=projects/.../locations/.../keyRings/.../cryptoKeys/wp-app-pw
+
+# ─── 既存 ─────────────────────────────────────
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+
+# GSC (OAuth refresh token は変わらず)
+GSC_OAUTH_CLIENT_ID=
+GSC_OAUTH_CLIENT_SECRET=
+GSC_OAUTH_REFRESH_TOKEN=
+
+# OIDC (Cloud Scheduler → Cloud Run)
+OIDC_AUDIENCE=
+OIDC_ALLOWED_EMAILS=
+OIDC_BYPASS=false
+
+# Basic Auth (UI 用)
+BASIC_AUTH_USERNAME=
+BASIC_AUTH_PASSWORD=
+
+# ─── 廃止 ─────────────────────────────────────
+# GCS_BUCKET / GCS_SCHEDULE_KEY  (Excel 永続化が無くなる)
+# WORDPRESS_URL / WORDPRESS_USERNAME / WORDPRESS_APP_PASSWORD  (sites テーブルに移動)
+# GSC_SITE_URL  (sites.gsc_site_url に移動)</code></pre>
+</section>
+
+<!-- ─────────────── 12. 運用 ─────────────── -->
+<section id="ops">
+  <h2>12. 運用 / 監視 / リカバリ</h2>
+  <div class="grid">
+    <div class="card">
+      <h4>監視</h4>
+      <ul>
+        <li>Cloud Logging で <code>severity=ERROR</code> を Slack に通知</li>
+        <li>毎朝 <code>run-today</code> 完了後に <code>processed / succeeded / failed</code> サマリを Slack 通知</li>
+        <li><code>plan-next-cycle</code> の draft 作成も Slack 通知（レビュー URL 付き）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>バックアップ</h4>
+      <ul>
+        <li>Cloud SQL の自動バックアップ（日次、保管7日）</li>
+        <li>週次で <code>mysqldump --single-transaction</code> を GCS にアップロード</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>セキュリティ</h4>
+      <ul>
+        <li>WP Application Password は <strong>KMS で暗号化して DB 格納</strong></li>
+        <li>Cloud Run のサービスアカウントは <code>cloudsql.client</code>, <code>cloudkms.cryptoKeyEncrypterDecrypter</code> のみ付与</li>
+        <li>UI は Basic Auth + HTTPS。API は OIDC（Cloud Scheduler）か Basic 認証のみ</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>リカバリ手順</h4>
+      <ol>
+        <li>日次実行失敗 → <code>POST /schedules/run/YYYY-MM-DD</code> を手動 curl</li>
+        <li>キーワード生成失敗 → <code>POST /keywords/plan/&lt;slug&gt;</code></li>
+        <li>サイトが死亡 → <code>PATCH /sites/&lt;slug&gt; { active: false }</code> で除外</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── 13. リスク ─────────────── -->
+<section id="risks">
+  <h2>13. リスクと未決事項</h2>
+  <div class="gap-list">
+    <h4>未決事項（要オーナー判断）</h4>
+    <ol>
+      <li><strong>5サイトの具体的なドメイン / ペルソナ:</strong> 既存 <code>gakkiou.com</code> 以外の4つは未定。slug, persona, default_article_type を埋める必要がある。</li>
+      <li><strong>承認フローを入れるか:</strong> <span class="pill should">SHOULD</span> 推奨。スキップする場合は <code>schedule_entries.status</code> を常に <code>'approved'</code> 直行に。</li>
+      <li><strong>WP 認証情報の保管方式:</strong> (a) KMS で DB 列を暗号化 / (b) Secret Manager に <code>wp-app-pw-&lt;slug&gt;</code> として置き DB には参照名のみ。後者の方が運用が楽。</li>
+      <li><strong>1日5本同時投稿の API レート:</strong> Claude / Imagen / WP REST の同時実行コスト試算が未。<code>p-limit(3)</code> 程度から開始予定。</li>
+      <li><strong>28日サイクルの境界:</strong> 月跨ぎや祝日を考慮するか。当面は単純な「cron で月1回 + cycleStart=明日」運用。</li>
+    </ol>
+  </div>
+
+  <div class="danger-box">
+    <h4>主要リスク</h4>
+    <ul>
+      <li><strong>キーワードの暴走:</strong> Claude が誤った / 攻撃的キーワードを生成 → 承認フェーズ必須 / NG ワードフィルタ</li>
+      <li><strong>WP 認証情報漏洩:</strong> 5サイト分のパスワードが集約されるため、KMS / Secret Manager と監査ログの取得を厳格に</li>
+      <li><strong>移行時のデータ消失:</strong> 旧 Excel を読み取り専用で 30日保持、移行直後の SQL ダンプを取得</li>
+      <li><strong>Cloud SQL 接続枯渇:</strong> Cloud Run のインスタンス × コネクションプール上限を意識（<code>pool: { max: 5 }</code> 程度から）</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─────────────── 14. ロードマップ ─────────────── -->
+<section id="roadmap">
+  <h2>14. ロードマップ / 実装順</h2>
+  <ol>
+    <li><span class="pill phase">Phase 1</span> <strong>DB 基盤</strong>: Cloud SQL 作成、<code>DatabaseModule</code>、Site / ScheduleEntry / RunHistory の Entity と Migration、<code>seeds/sites.ts</code></li>
+    <li><span class="pill phase">Phase 2</span> <strong>マルチサイト化</strong>: <code>WordpressService</code> を <code>Site</code> 駆動に、<code>BlogGeneratorService</code> が <code>site</code> を受け取る、<code>run-today</code> が複数サイト並列実行</li>
+    <li><span class="pill phase">Phase 3</span> <strong>Excel 移行</strong>: <code>migrate-from-excel.ts</code>、<code>SchedulerStorageService</code> を TypeORM Repository ベースに置換、旧 Excel コード削除</li>
+    <li><span class="pill phase">Phase 4</span> <strong>GSC 履歴化</strong>: <code>GscSnapshot</code> / <code>GscQueryRow</code> Entity、<code>SearchConsoleService.fetchAndStore</code></li>
+    <li><span class="pill phase">Phase 5</span> <strong>Keyword Planner</strong>: <code>KeywordPlannerModule</code>、Claude プロンプト、draft → approved フロー、Cloud Scheduler ジョブ追加</li>
+    <li><span class="pill phase">Phase 6</span> <strong>UI</strong>: スケジュール / プラン承認画面、Slack 通知</li>
+    <li><span class="pill phase">Phase 7</span> <strong>運用ハードニング</strong>: KMS 暗号化、監査ログ、バックアップ自動化</li>
+  </ol>
+
+  <h3>14.1 完了の定義（DoD）</h3>
+  <ul class="checklist">
+    <li>5サイトすべてが <code>active=true</code> で登録されている</li>
+    <li>毎朝 09:00 JST に 5本の下書きが各 WP に作成される（過去7日連続成功）</li>
+    <li>翌28日分のスケジュールが <code>plan-next-cycle</code> の自動実行 → 承認のみで埋まる</li>
+    <li>旧 <code>SchedulerStorageService</code> と <code>GCS_BUCKET</code> 関連 env が削除済み</li>
+    <li>DB の日次バックアップが GCS に蓄積されている</li>
+    <li>README に「セットアップ / 移行 / リカバリ」の手順が記載されている</li>
+  </ul>
+</section>
+
+<div class="footer">
+  Blog Auto v2 仕様書 — 2026-05-15<br>
+  related: <code>docs/saas-spec.html</code> (v1 / SaaS 化検討), <code>docs/saas-functional-spec.html</code> (v1 機能仕様)
+</div>
+
+</div><!-- /.container -->
+</body>
+</html>

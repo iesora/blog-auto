@@ -199,16 +199,30 @@ ${SWELL_BLOCKS}
 ${JSON_FORMAT}`,
 };
 
+export interface BuildPromptOptions {
+  persona?: string;
+  siteName?: string;
+}
+
 export function buildPrompt(
   articleType: ArticleType,
   keywords: string[],
   topic?: string,
+  opts: BuildPromptOptions = {},
 ): string {
   const template = PROMPT_TEMPLATES[articleType];
   const keywordList = keywords.join(', ');
   const topicLine = topic ? `トピック: ${topic}\n` : '';
 
-  return template
-    .replace('{{keywords}}', keywordList)
-    .replace('{{topic}}', topicLine);
+  const personaPrefix =
+    opts.persona || opts.siteName
+      ? `## 担当サイト\n- サイト名: ${opts.siteName ?? '(指定なし)'}\n- ペルソナ: ${opts.persona ?? '(指定なし)'}\n上記サイトのトーン・読者像に合わせて記事を書いてください。\n\n`
+      : '';
+
+  return (
+    personaPrefix +
+    template
+      .replace('{{keywords}}', keywordList)
+      .replace('{{topic}}', topicLine)
+  );
 }

@@ -11,7 +11,15 @@ function basicAuthMiddleware(username: string, password: string) {
   const expectedPass = Buffer.from(password, 'utf-8');
 
   // API のたたきは Basic 認証を通さない（画面の保護のみが目的）
-  const apiPrefixes = ['/wordpress', '/blog-generator', '/schedules'];
+  const apiPrefixes = [
+    '/wordpress',
+    '/blog-generator',
+    '/schedules',
+    '/search-console',
+    '/sites',
+    '/keywords',
+    '/gsc',
+  ];
 
   return (req: Request, res: Response, next: NextFunction) => {
     if (
@@ -62,7 +70,7 @@ async function bootstrap() {
     );
   }
 
-  app.useStaticAssets(join(__dirname, '..', 'public'));
+  app.useStaticAssets(join(__dirname, '..', '..', 'public'));
   await app.listen(process.env.PORT ?? 3100);
 }
 bootstrap();

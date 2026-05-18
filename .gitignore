@@ -2,3 +2,7 @@ node_modules
 dist
 .env
 data
+
+# Google service account keys / OAuth client secrets
+snappy-helper-*.json
+client_secret_*.json

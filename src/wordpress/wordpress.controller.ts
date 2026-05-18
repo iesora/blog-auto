@@ -12,53 +12,67 @@ import {
 import { WordpressService } from './wordpress.service';
 import { CreatePostDto, UpdatePostDto } from './wordpress.dto';
 
-@Controller('wordpress')
+/**
+ * WordPress 操作 API。マルチサイト化に伴い :slug パラメータを必須にした。
+ */
+@Controller('wordpress/:slug')
 export class WordpressController {
   constructor(private readonly wordpressService: WordpressService) {}
 
   @Post('posts')
-  createPost(@Body() dto: CreatePostDto) {
-    return this.wordpressService.createPost(dto);
+  async createPost(@Param('slug') slug: string, @Body() dto: CreatePostDto) {
+    const client = await this.wordpressService.forSlug(slug);
+    return client.createPost(dto);
   }
 
   @Put('posts/:id')
-  updatePost(
+  async updatePost(
+    @Param('slug') slug: string,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePostDto,
   ) {
-    return this.wordpressService.updatePost(id, dto);
+    const client = await this.wordpressService.forSlug(slug);
+    return client.updatePost(id, dto);
   }
 
   @Delete('posts/:id')
-  deletePost(@Param('id', ParseIntPipe) id: number) {
-    return this.wordpressService.deletePost(id);
+  async deletePost(
+    @Param('slug') slug: string,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const client = await this.wordpressService.forSlug(slug);
+    return client.deletePost(id);
   }
 
   @Get('posts/:id')
-  getPost(@Param('id', ParseIntPipe) id: number) {
-    return this.wordpressService.getPost(id);
+  async getPost(
+    @Param('slug') slug: string,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const client = await this.wordpressService.forSlug(slug);
+    return client.getPost(id);
   }
 
   @Get('posts')
-  listPosts(
+  async listPosts(
+    @Param('slug') slug: string,
     @Query('page') page?: number,
     @Query('per_page') perPage?: number,
     @Query('status') status?: string,
   ) {
-    return this.wordpressService.listPosts({
-      page,
-      per_page: perPage,
-      status,
-    });
+    const client = await this.wordpressService.forSlug(slug);
+    return client.listPosts({ page, per_page: perPage, status });
   }
 
   @Get('categories')
-  listCategories() {
-    return this.wordpressService.listCategories();
+  async listCategories(@Param('slug') slug: string) {
+    const client = await this.wordpressService.forSlug(slug);
+    return client.listCategories();
   }
 
   @Get('tags')
-  listTags() {
-    return this.wordpressService.listTags();
+  async listTags(@Param('slug') slug: string) {
+    const client = await this.wordpressService.forSlug(slug);
+    return client.listTags();
   }
 }

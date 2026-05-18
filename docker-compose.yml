@@ -1,0 +1,21 @@
+version: '3.7'
+services:
+  blog-auto:
+    container_name: blog-auto
+    image: mysql/mysql-server:8.0.23
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_USER: develop
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: develop
+      TZ: 'Asia/Tokyo'
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    volumes:
+      - blog-auto-db-data:/var/lib/mysql
+    ports:
+      - 3306:3306
+    env_file:
+      - .development.env
+volumes:
+  blog-auto-db-data:

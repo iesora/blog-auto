@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Blog Auto SaaS化 仕様書</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --code-bg: #f1f5f9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+  header.hero {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 64px 32px;
+    margin-bottom: 48px;
+  }
+  header.hero .inner {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  header.hero h1 {
+    font-size: 32px;
+    margin: 0 0 8px;
+    font-weight: 700;
+  }
+  header.hero p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 16px;
+  }
+  header.hero .meta {
+    margin-top: 24px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    opacity: 0.85;
+  }
+  h2 {
+    font-size: 24px;
+    margin: 56px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+  }
+  h3 {
+    font-size: 18px;
+    margin: 32px 0 12px;
+    color: var(--primary-dark);
+  }
+  h4 {
+    font-size: 15px;
+    margin: 20px 0 8px;
+    color: var(--text);
+  }
+  p, li { font-size: 14px; }
+  code {
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+  }
+  pre {
+    background: var(--code-bg);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  pre code { background: transparent; padding: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    background: var(--card);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+    vertical-align: top;
+  }
+  th {
+    background: #f1f5f9;
+    font-weight: 600;
+    font-size: 12.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  tr:last-child td { border-bottom: none; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 16px 0;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  .pill.must { background: #fee2e2; color: var(--danger); }
+  .pill.should { background: #fef3c7; color: var(--warning); }
+  .pill.could { background: #dcfce7; color: var(--success); }
+  .pill.phase { background: #dbeafe; color: var(--primary-dark); }
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 48px;
+  }
+  .toc h2 {
+    margin: 0 0 12px;
+    border: none;
+    font-size: 16px;
+  }
+  .toc ol {
+    margin: 0;
+    padding-left: 20px;
+    columns: 2;
+    column-gap: 32px;
+  }
+  .toc li { margin: 4px 0; font-size: 13.5px; }
+  .toc a { color: var(--primary); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .gap-list {
+    background: #fffbeb;
+    border-left: 4px solid var(--warning);
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin: 12px 0;
+  }
+  .gap-list h4 { color: var(--warning); margin-top: 0; }
+  .arch-diagram {
+    background: var(--code-bg);
+    padding: 24px;
+    border-radius: 8px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  ul.checklist {
+    list-style: none;
+    padding-left: 0;
+  }
+  ul.checklist li {
+    padding: 4px 0 4px 24px;
+    position: relative;
+  }
+  ul.checklist li::before {
+    content: "□";
+    position: absolute;
+    left: 0;
+    color: var(--muted);
+    font-weight: bold;
+  }
+  .footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="inner">
+    <h1>Blog Auto — SaaS化 仕様書</h1>
+    <p>WordPress自動投稿システムをマルチテナントSaaSへ拡張するための機能要件定義</p>
+    <div class="meta">
+      <span>Version 0.1 (Draft)</span>
+      <span>2026-05-09</span>
+      <span>対象: 現行 NestJS + Cloud Run + GCS 単一テナント実装</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+<div class="toc">
+  <h2>目次</h2>
+  <ol>
+    <li><a href="#overview">概要と前提</a></li>
+    <li><a href="#current">現状アーキテクチャ</a></li>
+    <li><a href="#gaps">SaaS化に必要なギャップ</a></li>
+    <li><a href="#tenancy">マルチテナンシー</a></li>
+    <li><a href="#auth">認証・アカウント</a></li>
+    <li><a href="#sites">WordPressサイト管理</a></li>
+    <li><a href="#billing">課金・プラン</a></li>
+    <li><a href="#quota">使用量・レート制限</a></li>
+    <li><a href="#queue">ジョブ実行基盤</a></li>
+    <li><a href="#brand">ブランド設定・テンプレ</a></li>
+    <li><a href="#api">公開API・Webhook</a></li>
+    <li><a href="#observability">運用・監視</a></li>
+    <li><a href="#security">セキュリティ・コンプラ</a></li>
+    <li><a href="#data">データモデル</a></li>
+    <li><a href="#api-spec">主要APIエンドポイント</a></li>
+    <li><a href="#nfr">非機能要件</a></li>
+    <li><a href="#roadmap">フェーズ別ロードマップ</a></li>
+  </ol>
+</div>
+
+<h2 id="overview">1. 概要と前提</h2>
+<p>
+現行の <code>blog-auto</code> は <strong>1社1WordPressサイト専用</strong> の運用ツールとして作られている。
+これを複数顧客が利用できるSaaSへ拡張するため、テナント分離・課金・セルフサービス・運用基盤を追加する。
+</p>
+
+<div class="card">
+  <h4>SaaS化のゴール</h4>
+  <ul>
+    <li>顧客がサインアップから <strong>30分以内</strong> に最初のドラフト記事を生成できる</li>
+    <li>複数のWordPressサイト・複数ユーザーを <strong>1テナント内で安全に分離</strong> しつつ管理できる</li>
+    <li>使用量に応じた <strong>従量課金 + 月額サブスク</strong> を成立させる</li>
+    <li>顧客のキーワード/ブランドガイドを学習して <strong>記事の質をテナント単位で最適化</strong></li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>想定ターゲット</h4>
+  <table>
+    <tr><th>セグメント</th><th>規模</th><th>主要ユースケース</th></tr>
+    <tr><td>個人ブロガー / アフィリエイター</td><td>1サイト・月10〜30本</td><td>SEO記事の量産、サムネ自動化</td></tr>
+    <tr><td>中小ECサイト</td><td>1〜3サイト・月30〜100本</td><td>商品紹介・ランキング・FAQ</td></tr>
+    <tr><td>Web制作会社・代理店</td><td>クライアント数10〜50</td><td>クライアントごとの代理運用、レポート</td></tr>
+  </table>
+</div>
+
+<h2 id="current">2. 現状アーキテクチャ</h2>
+<div class="arch-diagram">
+[Cloud Scheduler] ──OIDC──▶ [Cloud Run: NestJS]
+                                    │
+                                    ├─▶ Anthropic API   (Claude 4.6 で記事生成)
+                                    ├─▶ Gemini API      (画像生成)
+                                    ├─▶ WordPress REST  (固定の1サイトに投稿)
+                                    └─▶ GCS (schedules.xlsx を直接読み書き)
+</div>
+
+<h3>現状の制約</h3>
+<table>
+  <tr><th>レイヤ</th><th>制約</th><th>SaaS化での問題</th></tr>
+  <tr><td>認証</td><td>Basic認証 1組</td><td>複数顧客を分離できない</td></tr>
+  <tr><td>WordPress接続</td><td><code>.env</code> に1サイト固定</td><td>顧客ごとの資格情報を持てない</td></tr>
+  <tr><td>スケジュール保存</td><td>GCS上の単一Excel</td><td>同時編集・テナント分離不可、ロールバック不能</td></tr>
+  <tr><td>ジョブ実行</td><td>Cloud Schedulerが「今日の1件」を叩く</td><td>顧客ごとの並列実行・リトライ制御ができない</td></tr>
+  <tr><td>APIキー</td><td>Anthropic/Gemini が共有</td><td>使用量を顧客に按分できない、コスト爆発リスク</td></tr>
+  <tr><td>UI</td><td>静的 <code>public/</code> + Basic認証</td><td>サインアップ・課金画面が無い</td></tr>
+</table>
+
+<h2 id="gaps">3. SaaS化に必要なギャップ（一覧）</h2>
+<p>優先度: <span class="pill must">MUST</span> ローンチに必須 <span class="pill should">SHOULD</span> 早期に欲しい <span class="pill could">COULD</span> 後追いで可</p>
+
+<table>
+  <tr><th>カテゴリ</th><th>機能</th><th>優先度</th></tr>
+  <tr><td rowspan="3">テナンシー</td><td>Organization / Workspace モデル</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>テナント単位のデータ分離（DB行レベル）</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>チームメンバー招待・RBAC</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td rowspan="4">認証</td><td>Email + パスワードのサインアップ/ログイン</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>メール認証・パスワードリセット</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>Google / GitHub OAuth</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td>2FA (TOTP)</td><td><span class="pill could">COULD</span></td></tr>
+  <tr><td rowspan="3">サイト管理</td><td>WordPress接続ウィザード（資格情報の暗号化保存）</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>1テナントで複数サイト運用</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td>接続ヘルスチェック・自動再認証</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td rowspan="4">課金</td><td>Stripe Subscription（月額プラン）</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>記事/画像生成数の従量課金（メータード）</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>無料トライアル / クーポン</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td>請求書PDF・領収書発行</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td rowspan="3">使用量制御</td><td>プラン上限の月次クォータ</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>テナント単位レート制限</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>使用量ダッシュボード</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td rowspan="3">ジョブ基盤</td><td>非同期キュー（Cloud Tasks / BullMQ）</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>テナント単位スケジューラ（cron式またはカレンダーUI）</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>失敗リトライ・DLQ・実行履歴</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td rowspan="4">記事品質</td><td>テナント別プロンプトテンプレート</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td>ブランドボイス（敬体/常体・トーン）設定</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td>NGワード・必須ワード辞書</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td>BYOK（顧客のClaude/Geminiキー持ち込み）</td><td><span class="pill could">COULD</span></td></tr>
+  <tr><td rowspan="3">統合</td><td>公開REST APIキー</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td>Webhook（生成完了/失敗）</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td>Zapier / Make 連携</td><td><span class="pill could">COULD</span></td></tr>
+  <tr><td rowspan="3">運用</td><td>監査ログ・操作履歴</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>テナント別エラー通知（メール/Slack）</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td>ステータスページ・SLA</td><td><span class="pill could">COULD</span></td></tr>
+  <tr><td rowspan="3">コンプラ</td><td>利用規約・プライバシーポリシー・特商法</td><td><span class="pill must">MUST</span></td></tr>
+  <tr><td>GDPR/個情法 対応（データ削除・エクスポート）</td><td><span class="pill should">SHOULD</span></td></tr>
+  <tr><td>SOC2 / ISMS（将来）</td><td><span class="pill could">COULD</span></td></tr>
+</table>
+
+<h2 id="tenancy">4. マルチテナンシー</h2>
+
+<h3>4.1 データモデルの基本方針</h3>
+<p><strong>シングルDB / シェアードスキーマ + tenant_id 行レベル分離</strong> を採用する。理由:</p>
+<ul>
+  <li>SMB中心ターゲットでテナント数が多くなる想定 → スキーマ分離はマイグレーション運用コストが破綻する</li>
+  <li>すべてのクエリに <code>WHERE tenant_id = ?</code> を強制するため、<strong>ORM層（Prisma/TypeORM）でテナントスコープのミドルウェア</strong> を必須化する</li>
+  <li>将来エンタープライズ顧客向けにDBインスタンス分離プランを別途用意できる余地を残す</li>
+</ul>
+
+<h3>4.2 階層</h3>
+<div class="arch-diagram">
+Organization (= 課金単位 / テナント)
+  ├─ Members (User × Role)
+  ├─ Sites (WordPress接続)
+  │   └─ Schedules / Articles / RunHistory
+  ├─ BrandProfiles (記事生成設定)
+  ├─ ApiKeys
+  └─ Subscription (Stripe)
+</div>
+
+<h3>4.3 ロール</h3>
+<table>
+  <tr><th>ロール</th><th>権限</th></tr>
+  <tr><td>Owner</td><td>請求・組織削除・全操作</td></tr>
+  <tr><td>Admin</td><td>サイト/メンバー管理・設定変更（請求は不可）</td></tr>
+  <tr><td>Editor</td><td>記事生成・スケジュール作成・公開</td></tr>
+  <tr><td>Viewer</td><td>閲覧のみ（レポート用）</td></tr>
+</table>
+
+<h2 id="auth">5. 認証・アカウント</h2>
+
+<h3>5.1 サインアップフロー</h3>
+<ol>
+  <li>Email + パスワード入力 → 確認メール送信</li>
+  <li>メール内リンクで verified=true</li>
+  <li>初回ログイン → Organization作成（社名 / 個人名）</li>
+  <li>WordPress接続ウィザード（後述）</li>
+  <li>無料トライアル開始（クレカ登録不要・3記事まで）</li>
+</ol>
+
+<h3>5.2 認証方式</h3>
+<ul>
+  <li><strong>セッション</strong>: HttpOnly Cookie + CSRFトークン (UI用)</li>
+  <li><strong>API</strong>: <code>X-Api-Key</code> ヘッダ（Bearerでも可）</li>
+  <li><strong>SSO</strong>: Google OAuth (Phase 1), SAML (Phase 3 / Enterprise)</li>
+  <li><strong>2FA</strong>: TOTP (Authenticator App)</li>
+</ul>
+
+<h3>5.3 既存実装からの移行</h3>
+<div class="gap-list">
+  <h4>既存 Basic認証 / OIDC ガードの扱い</h4>
+  <ul>
+    <li><code>scheduler/oidc-auth.guard.ts</code>: Cloud Scheduler→Cloud Run の内部呼び出し用に残す（システム間通信のみ）</li>
+    <li><code>main.ts</code> のBasic認証: 廃止し、セッション認証ミドルウェアに置換</li>
+    <li>運用者用の Admin Console は別ドメイン（<code>admin.example.com</code>）で IPアロー + SSO</li>
+  </ul>
+</div>
+
+<h2 id="sites">6. WordPressサイト管理</h2>
+
+<h3>6.1 接続ウィザード</h3>
+<ol>
+  <li>サイトURL入力 → REST APIエンドポイントの存在確認 (<code>/wp-json/</code>)</li>
+  <li>認証方式選択:
+    <ul>
+      <li>Application Password（推奨）: ユーザー名 + 16桁パスワード</li>
+      <li>OAuth2 プラグイン経由（将来）</li>
+    </ul>
+  </li>
+  <li>接続テスト: 投稿一覧取得 + メディアアップロード権限の確認</li>
+  <li>カテゴリ・タグの初回同期（DB側にミラー）</li>
+</ol>
+
+<h3>6.2 資格情報の保存</h3>
+<ul>
+  <li>WordPressのアプリケーションパスワードは <strong>KMS（GCP Cloud KMS / AWS KMS）で暗号化</strong> してDBに保存</li>
+  <li>復号は実行時にメモリ上のみ。ログ出力禁止のフィルタを ConfigService にかける</li>
+  <li>キーローテーション: 90日ごとに envelope encryption の DEK を再生成</li>
+</ul>
+
+<h3>6.3 ヘルスチェック</h3>
+<ul>
+  <li>1日1回、各サイトに対して軽量な <code>GET /wp-json/wp/v2/users/me</code> を実行</li>
+  <li>連続3回失敗 → ダッシュボードで警告 + メール通知</li>
+  <li>パスワード期限切れ・サイトダウン・SSL切れを区別したエラーコード</li>
+</ul>
+
+<h2 id="billing">7. 課金・プラン</h2>
+
+<h3>7.1 プラン例</h3>
+<table>
+  <tr><th>プラン</th><th>月額</th><th>記事数/月</th><th>サイト数</th><th>メンバー数</th><th>主な特徴</th></tr>
+  <tr><td>Free</td><td>¥0</td><td>3</td><td>1</td><td>1</td><td>14日トライアル</td></tr>
+  <tr><td>Starter</td><td>¥2,980</td><td>30</td><td>1</td><td>2</td><td>個人ブロガー向け</td></tr>
+  <tr><td>Pro</td><td>¥9,800</td><td>120</td><td>3</td><td>5</td><td>従量超過 +¥80/記事</td></tr>
+  <tr><td>Agency</td><td>¥29,800</td><td>500</td><td>20</td><td>無制限</td><td>API・Webhook・優先サポート</td></tr>
+  <tr><td>Enterprise</td><td>個別</td><td>無制限</td><td>無制限</td><td>無制限</td><td>SAML・SLA・専用環境</td></tr>
+</table>
+
+<h3>7.2 Stripe実装</h3>
+<ul>
+  <li>Subscription + Metered Billing（記事数・画像数を usage_record に送信）</li>
+  <li>Webhook エンドポイント: <code>POST /webhooks/stripe</code>
+    <ul>
+      <li><code>customer.subscription.updated</code> → プラン状態同期</li>
+      <li><code>invoice.payment_failed</code> → 機能停止 + メール</li>
+      <li><code>customer.subscription.deleted</code> → 30日猶予後にアーカイブ</li>
+    </ul>
+  </li>
+  <li>顧客ポータル（Stripe Customer Portal）でプラン変更・カード変更・請求書DL</li>
+  <li>日本向け: 銀行振込（Pro以上のみ・年契約）も追加検討</li>
+</ul>
+
+<h3>7.3 コスト構造の試算</h3>
+<table>
+  <tr><th>項目</th><th>1記事あたり概算</th><th>備考</th></tr>
+  <tr><td>Claude Sonnet 4.6 (記事本文)</td><td>約¥30〜50</td><td>6,400 tokens × 出力単価</td></tr>
+  <tr><td>Gemini 画像生成 × 3</td><td>約¥15〜25</td><td>サムネ + セクション画像2枚</td></tr>
+  <tr><td>インフラ・帯域</td><td>約¥3〜5</td><td>Cloud Run + Storage</td></tr>
+  <tr><td><strong>合計原価</strong></td><td><strong>約¥50〜80</strong></td><td>BYOK選択時はAI部分が顧客負担</td></tr>
+</table>
+
+<h2 id="quota">8. 使用量・レート制限</h2>
+
+<h3>8.1 メータリング</h3>
+<ul>
+  <li>記事生成完了時に <code>UsageRecord(tenantId, type='article', cost=1, ts)</code> を書き込む</li>
+  <li>画像は <code>type='image'</code> で別カウント（プランによる）</li>
+  <li>月初にリセット。プラン変更時はProrationを反映</li>
+</ul>
+
+<h3>8.2 制限のかけ方</h3>
+<table>
+  <tr><th>制限</th><th>実装</th></tr>
+  <tr><td>月次クォータ</td><td>記事生成APIの入口で <code>UsageService.canConsume(tenant, 'article')</code> を確認</td></tr>
+  <tr><td>同時実行数</td><td>キューのテナント別concurrency（Free:1, Pro:5, Agency:20）</td></tr>
+  <tr><td>APIレートリミット</td><td>Redis + sliding window。プラン別RPM</td></tr>
+  <tr><td>サーキットブレーカ</td><td>WordPress接続が連続失敗する顧客を一時的に停止</td></tr>
+</table>
+
+<h2 id="queue">9. ジョブ実行基盤</h2>
+
+<h3>9.1 アーキテクチャ移行</h3>
+<div class="arch-diagram">
+[UI / API] ──▶ [enqueue: Cloud Tasks or BullMQ]
+                       │
+                       ▼
+[Worker (Cloud Run jobs / 別サービス)]
+   ├─ Claude生成
+   ├─ Gemini画像生成
+   ├─ WordPressアップロード
+   └─ Webhook通知 + UsageRecord
+</div>
+
+<h3>9.2 スケジューラの再設計</h3>
+<p>現行は「全顧客の今日の予約を1つのCloud Schedulerが叩く」が、SaaSでは破綻するため:</p>
+<ul>
+  <li><strong>マスターcron</strong>（毎時0分）が <code>Schedule</code> テーブルから直近1時間に発火すべきジョブをSELECT → Cloud Tasks に投入</li>
+  <li>ユーザーは UI でカレンダー / cron式（簡易プリセット）を指定</li>
+  <li>タイムゾーンはテナント設定に従う（デフォルト: <code>Asia/Tokyo</code>）</li>
+</ul>
+
+<h3>9.3 既存 SchedulerStorageService の置換</h3>
+<div class="gap-list">
+  <h4>Excel-on-GCS の廃止</h4>
+  <ul>
+    <li>現状 <code>schedules.xlsx</code> 単一ファイル → 同時実行で破損リスク</li>
+    <li>Postgres の <code>schedules</code> テーブルに完全移行</li>
+    <li>ユーザーへの「Excel一括取り込み」UXは残す（CSV/Excelインポート機能として）</li>
+  </ul>
+</div>
+
+<h2 id="brand">10. ブランド設定・テンプレート</h2>
+
+<h3>10.1 BrandProfile</h3>
+<ul>
+  <li>会社/ブログ名、業種、想定読者ペルソナ</li>
+  <li>文体: 敬体 / 常体 / 砕けた口語 / プロフェッショナル</li>
+  <li>NGワード（薬機法対応など）・必須CTAフレーズ</li>
+  <li>内部リンクのドメインルール</li>
+</ul>
+
+<h3>10.2 プロンプトテンプレート</h3>
+<p>現行の <code>prompt-templates.ts</code> の <code>buildPrompt(articleType, keywords, topic)</code> を拡張:</p>
+<pre><code>buildPrompt({
+  articleType,
+  keywords,
+  topic,
+  brandProfile,    // 追加
+  customSystemPrompt, // Pro以上で編集可
+  examples,        // few-shot: 過去の高評価記事
+})</code></pre>
+
+<h3>10.3 記事タイプの拡張</h3>
+<p>現行の SEO / REPAIR_REPORT / QA / RANKING に加え、ユーザー定義テンプレを許容（Agencyプラン以上）。</p>
+
+<h2 id="api">11. 公開API・Webhook</h2>
+
+<h3>11.1 REST API</h3>
+<pre><code>POST   /v1/articles              # 単発生成（同期 or 非同期）
+GET    /v1/articles/:id          # 状態取得
+POST   /v1/schedules             # 予約作成
+GET    /v1/sites                 # 連携サイト一覧
+POST   /v1/sites/:id/test        # 接続テスト</code></pre>
+<p>認証: <code>Authorization: Bearer sk_live_xxx</code>。テナント単位でキー管理（複数発行可・スコープ付与可）。</p>
+
+<h3>11.2 Webhook</h3>
+<table>
+  <tr><th>イベント</th><th>ペイロード</th></tr>
+  <tr><td><code>article.generated</code></td><td>postId, link, title, usageCost</td></tr>
+  <tr><td><code>article.failed</code></td><td>error.code, error.message, retryable</td></tr>
+  <tr><td><code>quota.exceeded</code></td><td>currentUsage, limit, resetAt</td></tr>
+  <tr><td><code>site.connection_failed</code></td><td>siteId, lastSuccessAt</td></tr>
+</table>
+<p>HMAC署名（<code>X-BlogAuto-Signature</code>）で改ざん検知。失敗時は指数バックオフで最大24時間再送。</p>
+
+<h2 id="observability">12. 運用・監視</h2>
+
+<h3>12.1 メトリクス</h3>
+<ul>
+  <li>テナント別: 記事生成成功率、生成時間 p50/p95、AI APIエラー率、WordPress 5xx率</li>
+  <li>システム全体: キュー滞留、Claude/Geminiのレイテンシ、コスト/日</li>
+  <li>ツール: Cloud Logging + Cloud Monitoring + Sentry（フロント/バック共通）</li>
+</ul>
+
+<h3>12.2 監査ログ</h3>
+<p>すべての書き込み操作を <code>audit_logs</code> に記録（actor, tenantId, action, target, ip, userAgent, diff）。Owner権限で90日分閲覧可能。</p>
+
+<h3>12.3 アラート</h3>
+<ul>
+  <li>テナント別エラー率 > 20% / 1時間 → 顧客にメール通知</li>
+  <li>キュー滞留 > 100件 → PagerDuty</li>
+  <li>AI原価が日次予算の150% → Slack通知 + 自動レート制御</li>
+</ul>
+
+<h2 id="security">13. セキュリティ・コンプライアンス</h2>
+
+<h3>13.1 セキュリティ要件</h3>
+<ul>
+  <li>WordPress資格情報・APIキーは KMS 暗号化必須</li>
+  <li>監査ログ・パスワードハッシュ（Argon2id）</li>
+  <li>OWASP Top 10 対応（XSS / CSRF / SSRF対策）。特にWordPressサイトURLは <strong>SSRFブロックリスト</strong>（プライベートIP, metadata endpoint 等）必須</li>
+  <li>依存パッケージの Dependabot / Renovate 自動更新</li>
+  <li>ペネトレーションテストを年1回（外部）</li>
+</ul>
+
+<h3>13.2 法務</h3>
+<ul>
+  <li>利用規約 / プライバシーポリシー / 特商法表記（日本向け必須）</li>
+  <li>データ削除リクエスト（30日以内対応）</li>
+  <li>GPT/Claudeの出力に対する免責条項（薬事/医療/金融分野の利用注意）</li>
+  <li>サブプロセッサ一覧の公開（Anthropic, Google, Stripe, GCP, etc）</li>
+</ul>
+
+<h2 id="data">14. データモデル（主要テーブル）</h2>
+
+<pre><code>organizations (id, name, plan, stripe_customer_id, trial_ends_at, created_at)
+users (id, email, password_hash, email_verified_at, totp_secret, created_at)
+memberships (org_id, user_id, role, created_at)             -- 多対多
+sites (id, org_id, url, username, app_password_enc, status, last_health_at)
+brand_profiles (id, org_id, name, tone, ng_words[], required_phrases[])
+schedules (id, org_id, site_id, brand_profile_id, run_at, cron_expr, payload_json, status)
+articles (id, org_id, site_id, schedule_id, wp_post_id, title, status,
+          generated_at, ai_cost_jpy, error)
+usage_records (id, org_id, type, qty, billing_period, ts)
+api_keys (id, org_id, prefix, hash, scopes[], last_used_at)
+webhooks (id, org_id, url, secret, events[], active)
+audit_logs (id, org_id, actor_user_id, action, target, diff, ip, ua, ts)
+subscriptions (org_id, stripe_sub_id, plan, status, current_period_end)
+</code></pre>
+
+<h2 id="api-spec">15. 主要APIエンドポイント（抜粋）</h2>
+
+<table>
+  <tr><th>Method</th><th>Path</th><th>説明</th><th>認証</th></tr>
+  <tr><td>POST</td><td>/auth/signup</td><td>サインアップ</td><td>-</td></tr>
+  <tr><td>POST</td><td>/auth/login</td><td>ログイン（Cookie発行）</td><td>-</td></tr>
+  <tr><td>GET</td><td>/me</td><td>自分とOrg情報</td><td>Session</td></tr>
+  <tr><td>POST</td><td>/orgs/:id/sites</td><td>WordPress接続追加</td><td>Admin+</td></tr>
+  <tr><td>POST</td><td>/orgs/:id/sites/:siteId/test</td><td>接続テスト</td><td>Admin+</td></tr>
+  <tr><td>POST</td><td>/orgs/:id/articles</td><td>記事生成（同期 or 非同期）</td><td>Editor+</td></tr>
+  <tr><td>GET</td><td>/orgs/:id/articles?status=&siteId=</td><td>一覧</td><td>Viewer+</td></tr>
+  <tr><td>POST</td><td>/orgs/:id/schedules</td><td>予約作成</td><td>Editor+</td></tr>
+  <tr><td>GET</td><td>/orgs/:id/usage?period=2026-05</td><td>使用量</td><td>Admin+</td></tr>
+  <tr><td>POST</td><td>/orgs/:id/api-keys</td><td>APIキー発行</td><td>Owner</td></tr>
+  <tr><td>POST</td><td>/webhooks/stripe</td><td>Stripeイベント受信</td><td>署名検証</td></tr>
+  <tr><td>POST</td><td>/internal/run-schedule</td><td>マスターcronから呼ぶ</td><td>OIDC</td></tr>
+</table>
+
+<h2 id="nfr">16. 非機能要件</h2>
+<table>
+  <tr><th>項目</th><th>目標値</th></tr>
+  <tr><td>可用性</td><td>99.5% (Pro以下) / 99.9% (Agency以上)</td></tr>
+  <tr><td>記事生成レイテンシ p95</td><td>120秒以内</td></tr>
+  <tr><td>UI 主要画面 LCP</td><td>2.5秒以内</td></tr>
+  <tr><td>RPO / RTO</td><td>RPO 1時間 / RTO 4時間</td></tr>
+  <tr><td>バックアップ</td><td>Postgres PITR + 日次スナップショット30日保存</td></tr>
+  <tr><td>多言語</td><td>UI: 日本語 / 英語。記事生成: 日本語優先（英語はPhase 2）</td></tr>
+</table>
+
+<h2 id="roadmap">17. フェーズ別ロードマップ</h2>
+
+<div class="grid">
+
+<div class="card">
+  <h4><span class="pill phase">Phase 1</span> ローンチMVP（〜3ヶ月）</h4>
+  <ul class="checklist">
+    <li>Postgres移行・マルチテナント基盤</li>
+    <li>サインアップ/ログイン/メール認証</li>
+    <li>WordPress接続ウィザード（1サイト/テナント）</li>
+    <li>UIから記事生成・スケジュール作成</li>
+    <li>Stripe Subscription（Free / Starter / Pro）</li>
+    <li>Cloud Tasks ベースのジョブキュー</li>
+    <li>使用量メータリング・月次クォータ</li>
+    <li>監査ログ・基本的なエラー通知</li>
+    <li>利用規約・プライバシーポリシー・特商法</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4><span class="pill phase">Phase 2</span> グロース（4〜6ヶ月）</h4>
+  <ul class="checklist">
+    <li>マルチサイト対応・チームメンバー招待・RBAC</li>
+    <li>BrandProfile・カスタムプロンプト</li>
+    <li>公開API + Webhook</li>
+    <li>Google OAuth / 2FA</li>
+    <li>Agencyプラン追加</li>
+    <li>使用量ダッシュボード・記事パフォーマンス取得</li>
+    <li>顧客向け詳細レポート（PDF/CSVエクスポート）</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4><span class="pill phase">Phase 3</span> エンタープライズ（7〜12ヶ月）</h4>
+  <ul class="checklist">
+    <li>SAML SSO / SCIM</li>
+    <li>BYOK（顧客のAIキー持ち込み）</li>
+    <li>カスタム記事タイプ・few-shot学習</li>
+    <li>Zapier / Make 連携</li>
+    <li>Shopify / 楽天 などEC連携の記事自動化</li>
+    <li>ISMS / SOC2 取得準備</li>
+    <li>専用環境プラン（DBインスタンス分離）</li>
+  </ul>
+</div>
+
+</div>
+
+<h2 id="risks">18. 主要リスクと対策</h2>
+<table>
+  <tr><th>リスク</th><th>影響</th><th>対策</th></tr>
+  <tr><td>AI APIコスト暴走（不正利用や無限ループ）</td><td>高</td><td>テナント別日次コスト上限・サーキットブレーカ・BYOK誘導</td></tr>
+  <tr><td>SSRFでWordPress接続URLからメタデータ漏洩</td><td>高</td><td>URLバリデーション + プライベートIPブロック</td></tr>
+  <tr><td>WordPress側のレートリミット</td><td>中</td><td>サイト単位の同時実行制御・指数バックオフ</td></tr>
+  <tr><td>Claudeモデル更新によるプロンプト互換性</td><td>中</td><td>モデルバージョン固定 + ステージング環境で回帰テスト</td></tr>
+  <tr><td>生成記事のハルシネーション（薬事/医療）</td><td>高</td><td>業種別ガードレール・NGワード辞書・免責条項</td></tr>
+  <tr><td>顧客データ漏洩</td><td>致命的</td><td>KMS暗号化・テナントスコープ強制・年次ペンテスト</td></tr>
+</table>
+
+<div class="footer">
+  Blog Auto SaaS Spec — Draft v0.1 / 2026-05-09<br>
+  本仕様書は現行コードベース（NestJS + Cloud Run + GCS）を起点としたものであり、Phase 1着手前にステークホルダーレビューを実施すること。
+</div>
+
+</div>
+</body>
+</html>

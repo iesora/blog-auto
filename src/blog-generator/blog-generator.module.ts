@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
+import { SitesModule } from '../sites/sites.module';
+import { WordpressModule } from '../wordpress/wordpress.module';
 import { BlogGeneratorController } from './blog-generator.controller';
 import { BlogGeneratorService } from './blog-generator.service';
 import { ImageGeneratorService } from './image-generator.service';
-import { WordpressModule } from '../wordpress/wordpress.module';
 
 @Module({
-  imports: [WordpressModule],
+  imports: [SitesModule, WordpressModule],
   controllers: [BlogGeneratorController],
   providers: [BlogGeneratorService, ImageGeneratorService],
   exports: [BlogGeneratorService],
