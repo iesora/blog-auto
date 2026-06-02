@@ -8,8 +8,6 @@ export class CreateSiteDto {
   wpAppPassword!: string; // 平文受信 → サーバ側で暗号化
   gscSiteUrl!: string;
   defaultArticleType?: ArticleType;
-  defaultCategories?: string[];
-  defaultTags?: string[];
   persona?: string;
   active?: boolean;
 }
@@ -21,8 +19,6 @@ export class UpdateSiteDto {
   wpAppPassword?: string;
   gscSiteUrl?: string;
   defaultArticleType?: ArticleType;
-  defaultCategories?: string[];
-  defaultTags?: string[];
   persona?: string;
   active?: boolean;
 }
@@ -35,8 +31,6 @@ export interface SiteResponse {
   wpUsername: string;
   gscSiteUrl: string;
   defaultArticleType: ArticleType;
-  defaultCategories?: string[];
-  defaultTags?: string[];
   persona?: string;
   active: boolean;
 }

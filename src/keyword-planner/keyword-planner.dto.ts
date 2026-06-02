@@ -43,3 +43,8 @@ export interface PlanCycleResult {
 export class ApprovePlanDto {
   approvedBy?: string;
 }
+
+export interface PlanDetail extends PlanSummary {
+  snapshotId?: number;
+  days: PlanDayItem[];
+}

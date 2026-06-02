@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { DataSource } from 'typeorm';
 import {
   Site,
@@ -12,11 +13,11 @@ const isProd = process.env.NODE_ENV === 'production';
 
 export const AppDataSource = new DataSource({
   type: 'mysql',
-  host: isProd ? process.env.DB_HOST : 'localhost',
-  port: 3306,
-  username: isProd ? process.env.DB_USERNAME : 'develop',
-  password: isProd ? process.env.DB_PASSWORD : 'password',
-  database: isProd ? process.env.DB_DATABASE : 'develop',
+  host: isProd ? process.env.DB_HOST : (process.env.DB_HOST ?? 'localhost'),
+  port: Number(process.env.DB_PORT) || 3306,
+  username: isProd ? process.env.DB_USERNAME : (process.env.DB_USERNAME ?? 'develop'),
+  password: isProd ? process.env.DB_PASSWORD : (process.env.DB_PASSWORD ?? 'password'),
+  database: isProd ? process.env.DB_DATABASE : (process.env.DB_DATABASE ?? 'develop'),
   entities: [
     Site,
     ScheduleEntry,

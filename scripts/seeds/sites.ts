@@ -24,8 +24,6 @@ interface SiteSeed {
   gscSiteUrl: string;
   defaultArticleType: ArticleType;
   persona: string;
-  defaultCategories?: string[];
-  defaultTags?: string[];
 }
 
 const seeds: SiteSeed[] = [
@@ -68,8 +66,6 @@ async function main() {
       wpAppPwEncrypted: encrypted,
       gscSiteUrl: s.gscSiteUrl,
       defaultArticleType: s.defaultArticleType,
-      defaultCategories: s.defaultCategories,
-      defaultTags: s.defaultTags,
       persona: s.persona,
       active: true,
     });
