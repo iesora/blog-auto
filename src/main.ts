@@ -24,9 +24,7 @@ function basicAuthMiddleware(username: string, password: string) {
 
   return (req: Request, res: Response, next: NextFunction) => {
     if (
-      apiPrefixes.some(
-        (p) => req.path === p || req.path.startsWith(`${p}/`),
-      )
+      apiPrefixes.some((p) => req.path === p || req.path.startsWith(`${p}/`))
     ) {
       return next();
     }
@@ -75,4 +73,4 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', '..', 'public'));
   await app.listen(process.env.PORT ?? 3100);
 }
-bootstrap();
+void bootstrap();
