@@ -33,15 +33,9 @@ const MIGRATIONS = [InitV2Schema1715817600000];
           type: 'mysql',
           host: isProd ? config.get<string>('DB_HOST') : 'localhost',
           port: +(config.get<string>('DB_PORT') ?? 3306),
-          username: isProd
-            ? config.get<string>('DB_USERNAME')
-            : 'develop',
-          password: isProd
-            ? config.get<string>('DB_PASSWORD')
-            : 'password',
-          database: isProd
-            ? config.get<string>('DB_DATABASE')
-            : 'develop',
+          username: isProd ? config.get<string>('DB_USERNAME') : 'develop',
+          password: isProd ? config.get<string>('DB_PASSWORD') : 'password',
+          database: isProd ? config.get<string>('DB_DATABASE') : 'develop',
           entities: ENTITIES,
           migrations: MIGRATIONS,
           migrationsRun: isProd,
