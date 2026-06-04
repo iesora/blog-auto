@@ -1,17 +1,13 @@
-FROM node:20  AS builder
-WORKDIR /line-reservation-api
-COPY ./package*.json /line-reservation-api/
+FROM node:20 AS builder
+WORKDIR /app
+COPY ./package*.json ./
 RUN npm ci
-COPY . /line-reservation-api/
+COPY . .
 RUN npm run build
 
-# for ncc
-
-# FROM node:14-alpine
-# WORKDIR /eo-api-v2
-# COPY --from=builder /eo-api-v2/dist ./
-# COPY --from=builder /eo-api-v2/package.json ./
-# RUN npm install typeorm@0.2.43
-
-# CMD ["npm", "run", "start:prod-new"]
-CMD ["npm", "run", "start:prod"]
+FROM node:20-slim
+WORKDIR /app
+COPY --from=builder /app/package*.json ./
+RUN npm ci --omit=dev
+COPY --from=builder /app/dist ./dist
+CMD ["node", "dist/main"]
