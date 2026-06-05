@@ -5,6 +5,7 @@ import { timingSafeEqual } from 'crypto';
 import type { NextFunction, Request, Response } from 'express';
 import { join } from 'path';
 import { AppModule } from './app.module';
+import { ApiExceptionFilter } from './common/api-exception.filter';
 
 function basicAuthMiddleware(username: string, password: string) {
   const expectedUser = Buffer.from(username, 'utf-8');
@@ -23,9 +24,7 @@ function basicAuthMiddleware(username: string, password: string) {
 
   return (req: Request, res: Response, next: NextFunction) => {
     if (
-      apiPrefixes.some(
-        (p) => req.path === p || req.path.startsWith(`${p}/`),
-      )
+      apiPrefixes.some((p) => req.path === p || req.path.startsWith(`${p}/`))
     ) {
       return next();
     }
@@ -70,7 +69,8 @@ async function bootstrap() {
     );
   }
 
+  app.useGlobalFilters(new ApiExceptionFilter());
   app.useStaticAssets(join(__dirname, '..', '..', 'public'));
   await app.listen(process.env.PORT ?? 3100);
 }
-bootstrap();
+void bootstrap();

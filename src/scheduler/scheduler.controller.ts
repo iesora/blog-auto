@@ -10,11 +10,13 @@ import {
   Query,
   Res,
   StreamableFile,
+  UseGuards,
 } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import type { Response } from 'express';
 import { SchedulerService } from './scheduler.service';
 import { PatchScheduleDto, UpsertScheduleDto } from './scheduler.dto';
+import { OidcAuthGuard } from './oidc-auth.guard';
 
 const XLSX_MIME =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -45,16 +47,19 @@ export class SchedulerController {
     return this.schedulerService.patch(id, dto);
   }
 
-  // ── Cloud Scheduler から呼ばれるエンドポイント（OIDC は middleware/Guard で別途） ──
+  // ── Cloud Scheduler から呼ばれるエンドポイント（OIDC Guard で保護） ──
+  // ローカル開発時は env に OIDC_BYPASS=true を設定すると検証をスキップする。
 
   @Post('run-today')
   @HttpCode(200)
+  @UseGuards(OidcAuthGuard)
   runToday() {
     return this.schedulerService.runToday();
   }
 
   @Post('run/:date')
   @HttpCode(200)
+  @UseGuards(OidcAuthGuard)
   runForDate(@Param('date') date: string) {
     return this.schedulerService.runForDate(date);
   }

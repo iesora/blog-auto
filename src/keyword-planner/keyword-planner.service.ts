@@ -22,6 +22,7 @@ import { SchedulerStorageService } from '../scheduler/scheduler-storage.service'
 import {
   PlanCycleResult,
   PlanDayItem,
+  PlanDetail,
   PlanResponseRaw,
   PlanSummary,
 } from './keyword-planner.dto';
@@ -202,6 +203,29 @@ export class KeywordPlannerService {
       approvedAt: p.approvedAt?.toISOString(),
       createdAt: p.createdAt.toISOString(),
     }));
+  }
+
+  async getPlanDetail(planId: number): Promise<PlanDetail> {
+    const plan = await this.planRepo.findOne({
+      where: { id: planId },
+      relations: { site: true },
+    });
+    if (!plan) throw new NotFoundException(`plan ${planId} not found`);
+    const raw = (plan.rawResponse ?? {}) as PlanResponseRaw;
+    const days = Array.isArray(raw.days) ? raw.days : [];
+    return {
+      id: plan.id,
+      siteSlug: plan.site?.slug ?? '',
+      cycleStart: plan.cycleStart,
+      cycleEnd: plan.cycleEnd,
+      status: plan.status,
+      generatedBy: plan.generatedBy,
+      approvedBy: plan.approvedBy,
+      approvedAt: plan.approvedAt?.toISOString(),
+      createdAt: plan.createdAt.toISOString(),
+      snapshotId: plan.snapshotId,
+      days,
+    };
   }
 
   async approvePlan(planId: number, approvedBy?: string): Promise<PlanSummary> {

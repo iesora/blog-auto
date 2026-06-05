@@ -13,10 +13,18 @@
       padding: 40px 20px;
       color: #333;
     }
-    .nav { max-width: 880px; margin: 0 auto 16px; font-size: 0.85rem; }
+    .nav { max-width: 960px; margin: 0 auto 16px; font-size: 0.85rem; display: flex; gap: 16px; flex-wrap: wrap; }
     .nav a { color: #4a90d9; text-decoration: none; }
+    .nav a:hover { text-decoration: underline; }
+    .nav .current {
+      color: #333;
+      font-weight: 700;
+      cursor: default;
+      border-bottom: 2px solid #4a90d9;
+      padding-bottom: 1px;
+    }
     .page {
-      max-width: 880px;
+      max-width: 960px;
       margin: 0 auto;
     }
     .header {
@@ -308,7 +316,13 @@
   </style>
 </head>
 <body>
-  <div class="nav"><a href="/generate.html">即時生成 →</a></div>
+  <div class="nav">
+    <a href="/sites.html">サイト管理</a>
+    <span class="current">スケジュール一覧</span>
+    <a href="/generate.html">即時生成</a>
+    <a href="/keyword-plans.html">キーワード生成</a>
+    <a href="/gsc-snapshots.html">データ分析</a>
+  </div>
 
   <div class="page">
     <div class="header">

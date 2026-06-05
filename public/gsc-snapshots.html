@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>データ分析</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding: 40px 20px;
+      color: #333;
+    }
+    .nav {
+      max-width: 960px;
+      margin: 0 auto 16px;
+      font-size: 0.85rem;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .nav a { color: #4a90d9; text-decoration: none; }
+    .nav a:hover { text-decoration: underline; }
+    .nav .current {
+      color: #333;
+      font-weight: 700;
+      cursor: default;
+      border-bottom: 2px solid #4a90d9;
+      padding-bottom: 1px;
+    }
+    .page { max-width: 960px; margin: 0 auto; }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header h1 { font-size: 1.5rem; }
+    .header .subtitle { color: #888; font-size: 0.9rem; margin-top: 4px; }
+    .header-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+    button {
+      padding: 12px 18px;
+      background: #4a90d9;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    button:hover { background: #3a7bc8; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    button.ghost { background: #fff; color: #4a90d9; border: 1px solid #4a90d9; }
+    button.ghost:hover { background: #f0f6fc; }
+    button.small { padding: 6px 12px; font-size: 0.8rem; }
+
+    select.select {
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+      min-width: 200px;
+    }
+    select.select:focus { border-color: #4a90d9; }
+    select.select:disabled { background: #f5f5f5; color: #888; cursor: not-allowed; }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      padding: 14px 20px; border-radius: 8px; font-size: 0.9rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 200;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e8b57; color: #fff; }
+    .toast.error { background: #d96a6a; color: #fff; }
+
+    .empty {
+      background: #fff;
+      border-radius: 12px;
+      padding: 60px 24px;
+      text-align: center;
+      color: #aaa;
+      font-size: 0.95rem;
+    }
+
+    .list { display: grid; gap: 12px; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      padding: 16px 22px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 20px;
+      align-items: center;
+      transition: box-shadow 0.2s;
+    }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .row-count {
+      text-align: center;
+      min-width: 90px;
+      padding-right: 18px;
+      border-right: 1px solid #eee;
+    }
+    .row-count .num {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #2c5d8a;
+      line-height: 1;
+    }
+    .row-count .lbl {
+      font-size: 0.7rem;
+      color: #888;
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+    .card-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .range {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.9rem;
+      color: #444;
+    }
+    .meta {
+      color: #888;
+      font-size: 0.8rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .meta code {
+      background: #eef2f7;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #444;
+    }
+    .card-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+
+    .info {
+      background: #eef4ff;
+      border-left: 3px solid #4a90d9;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      color: #2c4666;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <a href="/sites.html">サイト管理</a>
+    <a href="/">スケジュール一覧</a>
+    <a href="/generate.html">即時生成</a>
+    <a href="/keyword-plans.html">キーワード生成</a>
+    <span class="current">データ分析</span>
+  </div>
+
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>データ分析</h1>
+        <p class="subtitle">Google Search Console のクエリ × ページ実績を取得・保存します。キーワード生成の根拠データになります。</p>
+      </div>
+      <div class="header-actions">
+        <select id="siteSelect" class="select"><option value="">サイトを選んでください</option></select>
+        <button id="takeBtn" disabled>＋ 新規スナップショット取得</button>
+      </div>
+    </div>
+
+    <div class="info">
+      取得期間はバックエンド既定 (直近 28 日想定) に従います。実行には 10〜30 秒程度かかります。<br>
+      スナップショットは <code>gsc_snapshots</code> + <code>gsc_query_rows</code> に永続化され、Excel エクスポートやキーワード生成の根拠として再利用されます。
+    </div>
+
+    <div id="listArea" class="list"><div class="empty">サイトを選ぶと一覧が表示されます。</div></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const siteSelect = $('siteSelect');
+    const takeBtn = $('takeBtn');
+    const listArea = $('listArea');
+    const toast = $('toast');
+
+    let sites = [];
+
+    function showToast(msg, ok = true) {
+      toast.textContent = msg;
+      toast.className = `toast ${ok ? 'success' : 'error'} show`;
+      setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+    const escapeHtml = (s) => String(s ?? '')
+      .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+
+    async function loadSites() {
+      try {
+        const res = await fetch('/sites');
+        sites = (await res.json()).filter(s => s.active);
+        if (sites.length === 0) {
+          siteSelect.innerHTML = '<option value="">登録済みサイトがありません</option>';
+          listArea.innerHTML = `<div class="empty">先に <a href="/sites.html" style="color:#4a90d9;">サイト管理</a> でサイトを登録してください。</div>`;
+          return;
+        }
+        siteSelect.innerHTML = '<option value="">サイトを選んでください</option>';
+        sites.forEach(s => {
+          const o = document.createElement('option');
+          o.value = s.slug;
+          o.textContent = `${s.name}（${s.slug}）`;
+          siteSelect.appendChild(o);
+        });
+      } catch (err) {
+        showToast(`サイト読み込み失敗: ${err.message}`, false);
+      }
+    }
+
+    async function loadSnapshots() {
+      const slug = siteSelect.value;
+      if (!slug) {
+        listArea.innerHTML = `<div class="empty">サイトを選ぶと一覧が表示されます。</div>`;
+        takeBtn.disabled = true;
+        return;
+      }
+      takeBtn.disabled = false;
+      listArea.innerHTML = '<div class="empty">読み込み中...</div>';
+      try {
+        const res = await fetch(`/gsc/snapshots?siteSlug=${encodeURIComponent(slug)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const snapshots = await res.json();
+        renderSnapshots(snapshots);
+      } catch (err) {
+        listArea.innerHTML = `<div class="empty">取得失敗: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderSnapshots(snapshots) {
+      if (!snapshots.length) {
+        listArea.innerHTML = `<div class="empty">このサイトのスナップショットはまだありません。<br>「＋ 新規スナップショット取得」で取得できます。</div>`;
+        return;
+      }
+      const sorted = [...snapshots].sort((a, b) =>
+        new Date(b.takenAt).getTime() - new Date(a.takenAt).getTime(),
+      );
+      listArea.innerHTML = sorted.map(s => {
+        const taken = new Date(s.takenAt).toLocaleString('ja-JP');
+        return `
+          <div class="card" data-id="${s.id}">
+            <div class="row-count">
+              <div class="num">${s.rowCount.toLocaleString()}</div>
+              <div class="lbl">rows</div>
+            </div>
+            <div class="card-body">
+              <div class="card-title">
+                <span>スナップショット #${s.id}</span>
+              </div>
+              <div class="range">${escapeHtml(s.startDate)} 〜 ${escapeHtml(s.endDate)}</div>
+              <div class="meta">
+                <span>取得日時: <code>${escapeHtml(taken)}</code></span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <a href="/gsc/snapshots/${s.id}/export.xlsx">
+                <button class="small ghost" type="button">Excel ダウンロード</button>
+              </a>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    siteSelect.addEventListener('change', loadSnapshots);
+
+    takeBtn.addEventListener('click', async () => {
+      const slug = siteSelect.value;
+      if (!slug) return;
+      if (!confirm(`${slug} の GSC データを取得して保存します。10〜30 秒かかります。よろしいですか？`)) return;
+      takeBtn.disabled = true;
+      takeBtn.textContent = '取得中...';
+      try {
+        const res = await fetch(`/gsc/snapshots/${encodeURIComponent(slug)}`, { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        showToast(`取得しました (snapshot #${data.id} / ${data.rowCount}行)`, true);
+        await loadSnapshots();
+      } catch (err) {
+        showToast(`取得失敗: ${err.message}`, false);
+      } finally {
+        takeBtn.disabled = false;
+        takeBtn.textContent = '＋ 新規スナップショット取得';
+      }
+    });
+
+    loadSites();
+  </script>
+</body>
+</html>

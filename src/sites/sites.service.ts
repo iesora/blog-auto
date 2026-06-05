@@ -30,8 +30,6 @@ export class SitesService {
       wpUsername: site.wpUsername,
       gscSiteUrl: site.gscSiteUrl,
       defaultArticleType: site.defaultArticleType,
-      defaultCategories: site.defaultCategories,
-      defaultTags: site.defaultTags,
       persona: site.persona,
       active: site.active,
     };
@@ -75,8 +73,6 @@ export class SitesService {
       wpAppPwEncrypted: encryptSecret(dto.wpAppPassword),
       gscSiteUrl: dto.gscSiteUrl,
       defaultArticleType: dto.defaultArticleType ?? ArticleType.SEO,
-      defaultCategories: dto.defaultCategories,
-      defaultTags: dto.defaultTags,
       persona: dto.persona,
       active: dto.active ?? true,
     });
@@ -94,9 +90,6 @@ export class SitesService {
     if (dto.gscSiteUrl !== undefined) site.gscSiteUrl = dto.gscSiteUrl;
     if (dto.defaultArticleType !== undefined)
       site.defaultArticleType = dto.defaultArticleType;
-    if (dto.defaultCategories !== undefined)
-      site.defaultCategories = dto.defaultCategories;
-    if (dto.defaultTags !== undefined) site.defaultTags = dto.defaultTags;
     if (dto.persona !== undefined) site.persona = dto.persona;
     if (dto.active !== undefined) site.active = dto.active;
     return this.repo.save(site);

@@ -124,13 +124,8 @@ export class BlogGeneratorService {
     }
 
     // 5. カテゴリ・タグの ID 解決
-    const categoryNames =
-      dto.categoryNames ??
-      site.defaultCategories ??
-      blog.suggestedCategories ??
-      [];
-    const tagNames =
-      dto.tagNames ?? site.defaultTags ?? blog.suggestedTags ?? [];
+    const categoryNames = dto.categoryNames ?? blog.suggestedCategories ?? [];
+    const tagNames = dto.tagNames ?? blog.suggestedTags ?? [];
 
     const [categoryIds, tagIds] = await Promise.all([
       this.resolveCategories(wp, categoryNames),

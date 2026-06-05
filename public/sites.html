@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>サイト管理</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding: 40px 20px;
+      color: #333;
+    }
+    .nav {
+      max-width: 960px;
+      margin: 0 auto 16px;
+      font-size: 0.85rem;
+      display: flex;
+      gap: 16px;
+    }
+    .nav a { color: #4a90d9; text-decoration: none; }
+    .nav a:hover { text-decoration: underline; }
+    .nav .current {
+      color: #333;
+      font-weight: 700;
+      cursor: default;
+      border-bottom: 2px solid #4a90d9;
+      padding-bottom: 1px;
+    }
+
+    .page { max-width: 960px; margin: 0 auto; }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header h1 { font-size: 1.5rem; }
+    .header .subtitle { color: #888; font-size: 0.9rem; margin-top: 4px; }
+    .header-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+    button {
+      padding: 12px 20px;
+      background: #4a90d9;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    button:hover { background: #3a7bc8; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    button.ghost { background: #fff; color: #4a90d9; border: 1px solid #4a90d9; }
+    button.ghost:hover { background: #f0f6fc; }
+    button.danger { background: #d96a6a; }
+    button.danger:hover { background: #c25555; }
+    button.success { background: #2e8b57; }
+    button.success:hover { background: #266e46; }
+    button.small { padding: 6px 12px; font-size: 0.8rem; }
+
+    select.select, input[type="text"], input[type="url"], input[type="password"], textarea {
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    select.select { cursor: pointer; min-width: 160px; }
+    .header-actions select.select { width: auto; }
+    select.select:focus, input:focus, textarea:focus { border-color: #4a90d9; }
+    select.select:disabled, input:disabled, textarea:disabled {
+      background: #f5f5f5;
+      color: #888;
+      cursor: not-allowed;
+    }
+    textarea { font-size: 0.85rem; resize: vertical; min-height: 70px; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 14px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e8b57; color: #fff; }
+    .toast.error { background: #d96a6a; color: #fff; }
+
+    /* List */
+    .list { display: grid; gap: 12px; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      padding: 20px 24px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: start;
+      transition: box-shadow 0.2s;
+    }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .card.inactive { opacity: 0.65; }
+    .card.inactive .card-title { color: #888; }
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .slug-chip {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: #eef2f7;
+      color: #4a6f9a;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .badge.active { background: #e6f4ea; color: #2e7d4f; }
+    .badge.inactive { background: #f0f0f0; color: #888; }
+
+    .meta-row {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 4px 12px;
+      font-size: 0.82rem;
+      color: #555;
+    }
+    .meta-row dt { color: #888; }
+    .meta-row dd { word-break: break-all; }
+    .meta-row a { color: #4a90d9; text-decoration: none; }
+    .meta-row a:hover { text-decoration: underline; }
+
+    .card-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-self: start;
+    }
+    .article-type-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #fff5e6;
+      color: #8a5a00;
+      font-size: 0.72rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .empty {
+      background: #fff;
+      border-radius: 12px;
+      padding: 60px 24px;
+      text-align: center;
+      color: #aaa;
+      font-size: 0.95rem;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 560px;
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+      padding: 32px;
+      animation: modalIn 0.18s ease-out;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .modal h2 { font-size: 1.2rem; margin-bottom: 4px; }
+    .modal .modal-subtitle { color: #888; font-size: 0.85rem; margin-bottom: 24px; }
+    .field { margin-bottom: 16px; }
+    .field-hint { font-size: 0.75rem; color: #888; margin-top: 4px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 6px; }
+    label .required { color: #d96a6a; margin-left: 4px; }
+    .field-checkbox label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .field-checkbox input[type="checkbox"] { width: auto; cursor: pointer; }
+    .modal-footer {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <span class="current">サイト管理</span>
+    <a href="/">スケジュール一覧</a>
+    <a href="/generate.html">即時生成</a>
+    <a href="/keyword-plans.html">キーワード生成</a>
+    <a href="/gsc-snapshots.html">データ分析</a>
+  </div>
+
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>サイト管理</h1>
+        <p class="subtitle">投稿先 WordPress サイトの登録・編集・有効/無効を管理します。</p>
+      </div>
+      <div class="header-actions">
+        <select id="filterSelect" class="select">
+          <option value="all">表示: 全て</option>
+          <option value="active">表示: 有効のみ</option>
+          <option value="inactive">表示: 無効のみ</option>
+        </select>
+        <button id="openCreateBtn">＋ 新規登録</button>
+      </div>
+    </div>
+
+    <div id="listArea" class="list">
+      <div class="empty">読み込み中...</div>
+    </div>
+  </div>
+
+  <!-- 作成・編集モーダル -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" role="dialog" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">サイトを新規登録</h2>
+      <p class="modal-subtitle" id="modalSubtitle">WordPress と Google Search Console の接続情報を入力してください。</p>
+      <form id="siteForm">
+        <div class="field-row">
+          <div class="field">
+            <label for="slug">slug<span class="required">*</span></label>
+            <input type="text" id="slug" placeholder="例: gakkiou" required>
+            <p class="field-hint">英小文字・数字・ハイフンのみ。作成後は変更不可。</p>
+          </div>
+          <div class="field">
+            <label for="name">表示名<span class="required">*</span></label>
+            <input type="text" id="name" placeholder="例: 楽器王 修理ブログ" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="wpUrl">WordPress URL<span class="required">*</span></label>
+          <input type="url" id="wpUrl" placeholder="https://example.com/" required>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="wpUsername">WordPress ユーザー名<span class="required">*</span></label>
+            <input type="text" id="wpUsername" placeholder="wp-user" required>
+          </div>
+          <div class="field">
+            <label for="wpAppPassword">WP アプリパスワード<span class="required" id="wpAppPasswordRequired">*</span></label>
+            <input type="password" id="wpAppPassword" placeholder="xxxx xxxx xxxx xxxx">
+            <p class="field-hint" id="wpAppPasswordHint">保存時に AES-256-GCM で暗号化されます。</p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="gscSiteUrl">Search Console プロパティ URL<span class="required">*</span></label>
+          <input type="url" id="gscSiteUrl" placeholder="https://example.com/" required>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="defaultArticleType">デフォルト記事タイプ</label>
+            <select id="defaultArticleType" class="select" style="width:100%">
+              <option value="seo">seo (SEO 記事)</option>
+              <option value="repair_report">repair_report (修理レポート)</option>
+              <option value="qa">qa (Q&amp;A)</option>
+              <option value="ranking">ranking (ランキング)</option>
+            </select>
+          </div>
+          <div class="field field-checkbox" style="display:flex;align-items:end;padding-bottom:12px;">
+            <label>
+              <input type="checkbox" id="active" checked>
+              有効 (active)
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="persona">ペルソナ</label>
+          <textarea id="persona" placeholder="記事生成時に参照する語り手の特徴・トーンなど"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="ghost" id="cancelBtn">キャンセル</button>
+          <button type="submit" id="submitBtn">登録する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalSubtitle = document.getElementById('modalSubtitle');
+    const submitBtn = document.getElementById('submitBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const openCreateBtn = document.getElementById('openCreateBtn');
+    const filterSelect = document.getElementById('filterSelect');
+    const listArea = document.getElementById('listArea');
+    const toast = document.getElementById('toast');
+    const form = document.getElementById('siteForm');
+
+    const $ = (id) => document.getElementById(id);
+    const fields = ['slug','name','wpUrl','wpUsername','wpAppPassword','gscSiteUrl','defaultArticleType','persona','active'];
+
+    let editingSlug = null; // null = create, string = edit
+    let cachedSites = [];
+
+    function showToast(msg, ok = true) {
+      toast.textContent = msg;
+      toast.className = `toast ${ok ? 'success' : 'error'} show`;
+      setTimeout(() => toast.classList.remove('show'), 2400);
+    }
+    const escapeHtml = (s) => String(s ?? '')
+      .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+
+    function openCreateModal() {
+      editingSlug = null;
+      modalTitle.textContent = 'サイトを新規登録';
+      modalSubtitle.textContent = 'WordPress と Google Search Console の接続情報を入力してください。';
+      submitBtn.textContent = '登録する';
+      $('slug').disabled = false;
+      $('wpAppPasswordRequired').style.display = '';
+      $('wpAppPassword').required = true;
+      $('wpAppPasswordHint').textContent = '保存時に AES-256-GCM で暗号化されます。';
+      form.reset();
+      $('active').checked = true;
+      $('defaultArticleType').value = 'seo';
+      modalBackdrop.classList.add('show');
+      setTimeout(() => $('slug').focus(), 50);
+    }
+
+    function openEditModal(site) {
+      editingSlug = site.slug;
+      modalTitle.textContent = `サイトを編集: ${site.name}`;
+      modalSubtitle.textContent = 'slug は変更できません。アプリパスワードは変更時のみ入力してください。';
+      submitBtn.textContent = '保存する';
+      $('slug').disabled = true;
+      $('wpAppPasswordRequired').style.display = 'none';
+      $('wpAppPassword').required = false;
+      $('wpAppPasswordHint').textContent = '空欄のままで送信すると現在のパスワードが維持されます。';
+      $('slug').value = site.slug;
+      $('name').value = site.name;
+      $('wpUrl').value = site.wpUrl;
+      $('wpUsername').value = site.wpUsername;
+      $('wpAppPassword').value = '';
+      $('gscSiteUrl').value = site.gscSiteUrl;
+      $('defaultArticleType').value = site.defaultArticleType || 'seo';
+      $('persona').value = site.persona || '';
+      $('active').checked = !!site.active;
+      modalBackdrop.classList.add('show');
+      setTimeout(() => $('name').focus(), 50);
+    }
+
+    function closeModal() {
+      modalBackdrop.classList.remove('show');
+    }
+
+    openCreateBtn.addEventListener('click', openCreateModal);
+    cancelBtn.addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modalBackdrop.classList.contains('show')) closeModal();
+    });
+
+    async function loadSites() {
+      listArea.innerHTML = '<div class="empty">読み込み中...</div>';
+      try {
+        const res = await fetch('/sites');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        cachedSites = await res.json();
+        renderList();
+      } catch (err) {
+        listArea.innerHTML = `<div class="empty">サイト一覧の読み込みに失敗しました: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderList() {
+      const mode = filterSelect.value;
+      const visible = cachedSites.filter(s => {
+        if (mode === 'active') return s.active;
+        if (mode === 'inactive') return !s.active;
+        return true;
+      });
+
+      if (visible.length === 0) {
+        listArea.innerHTML = `
+          <div class="empty">
+            ${cachedSites.length === 0
+              ? '<div class="empty-icon">🗂️</div>サイトがまだ登録されていません。<br>右上の「＋ 新規登録」から追加してください。'
+              : '該当するサイトがありません。表示フィルタを変えてみてください。'}
+          </div>`;
+        return;
+      }
+
+      listArea.innerHTML = visible.map(s => {
+        const activeBadge = s.active
+          ? '<span class="badge active">有効</span>'
+          : '<span class="badge inactive">無効</span>';
+        const articleType = `<span class="article-type-chip">${escapeHtml(s.defaultArticleType || 'seo')}</span>`;
+        return `
+          <div class="card ${s.active ? '' : 'inactive'}" data-slug="${escapeHtml(s.slug)}">
+            <div class="card-body">
+              <div class="card-title">
+                <span>${escapeHtml(s.name)}</span>
+                <span class="slug-chip">${escapeHtml(s.slug)}</span>
+                ${activeBadge}
+                ${articleType}
+              </div>
+              <dl class="meta-row">
+                <dt>WP URL</dt>      <dd><a href="${escapeHtml(s.wpUrl)}" target="_blank" rel="noreferrer">${escapeHtml(s.wpUrl)}</a></dd>
+                <dt>WP user</dt>     <dd>${escapeHtml(s.wpUsername)}</dd>
+                <dt>GSC プロパティ</dt> <dd>${escapeHtml(s.gscSiteUrl)}</dd>
+              </dl>
+            </div>
+            <div class="card-actions">
+              <button class="small ghost" data-action="edit">編集</button>
+              <button class="small ${s.active ? 'danger' : 'success'}" data-action="toggle">${s.active ? '無効化' : '有効化'}</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      listArea.querySelectorAll('[data-action="edit"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const slug = btn.closest('.card').dataset.slug;
+          const site = cachedSites.find(s => s.slug === slug);
+          if (site) openEditModal(site);
+        });
+      });
+      listArea.querySelectorAll('[data-action="toggle"]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const slug = e.currentTarget.closest('.card').dataset.slug;
+          const site = cachedSites.find(s => s.slug === slug);
+          if (!site) return;
+          const next = !site.active;
+          e.currentTarget.disabled = true;
+          try {
+            const res = await fetch(`/sites/${encodeURIComponent(slug)}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ active: next }),
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.message || `HTTP ${res.status}`);
+            }
+            showToast(next ? '有効化しました' : '無効化しました', true);
+            await loadSites();
+          } catch (err) {
+            showToast(`変更に失敗しました: ${err.message}`, false);
+            e.currentTarget.disabled = false;
+          }
+        });
+      });
+    }
+
+    filterSelect.addEventListener('change', renderList);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+
+      const payload = {
+        name: $('name').value.trim(),
+        wpUrl: $('wpUrl').value.trim(),
+        wpUsername: $('wpUsername').value.trim(),
+        gscSiteUrl: $('gscSiteUrl').value.trim(),
+        defaultArticleType: $('defaultArticleType').value,
+        persona: $('persona').value.trim() || undefined,
+        active: $('active').checked,
+      };
+      const pw = $('wpAppPassword').value;
+      if (pw) payload.wpAppPassword = pw;
+
+      try {
+        let res;
+        if (editingSlug) {
+          res = await fetch(`/sites/${encodeURIComponent(editingSlug)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          payload.slug = $('slug').value.trim();
+          payload.wpAppPassword = pw;
+          res = await fetch('/sites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        }
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || `HTTP ${res.status}`);
+        }
+        showToast(editingSlug ? '更新しました' : '登録しました', true);
+        closeModal();
+        await loadSites();
+      } catch (err) {
+        showToast(`${editingSlug ? '更新' : '登録'}に失敗しました: ${err.message}`, false);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    loadSites();
+  </script>
+</body>
+</html>
