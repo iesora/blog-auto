@@ -130,6 +130,14 @@ export class SchedulerService {
     return this.toView(updated, lastRun);
   }
 
+  async remove(id: number): Promise<{ id: number; deleted: true }> {
+    const entry = await this.storage.findById(id);
+    if (!entry) throw new NotFoundException(`schedule id=${id} not found`);
+    await this.storage.deleteById(id);
+    this.logger.log(`schedule ${id} (${entry.scheduledDate}) deleted`);
+    return { id, deleted: true };
+  }
+
   async list(opts: {
     siteSlug?: string;
     from?: string;

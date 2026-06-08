@@ -58,7 +58,8 @@ export class SchedulerStorageService {
       .leftJoinAndSelect('s.site', 'site')
       .orderBy('s.scheduledDate', 'ASC')
       .addOrderBy('site.id', 'ASC');
-    if (opts.siteSlug) qb.andWhere('site.slug = :slug', { slug: opts.siteSlug });
+    if (opts.siteSlug)
+      qb.andWhere('site.slug = :slug', { slug: opts.siteSlug });
     if (opts.from) qb.andWhere('s.scheduledDate >= :from', { from: opts.from });
     if (opts.to) qb.andWhere('s.scheduledDate <= :to', { to: opts.to });
     return qb.getMany();
@@ -69,6 +70,11 @@ export class SchedulerStorageService {
       where: { id },
       relations: { site: true },
     });
+  }
+
+  async deleteById(id: number): Promise<void> {
+    // run_history は FK の onDelete: CASCADE で連動削除される
+    await this.scheduleRepo.delete({ id });
   }
 
   async findApprovedForDate(date: string): Promise<ScheduleEntry[]> {
