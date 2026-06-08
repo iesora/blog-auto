@@ -60,6 +60,8 @@
     button.ghost { background: #fff; color: #4a90d9; border: 1px solid #4a90d9; }
     button.ghost:hover { background: #f0f6fc; }
     button.small { padding: 6px 12px; font-size: 0.8rem; }
+    button.danger { background: #d96a6a; }
+    button.danger:hover { background: #c25555; }
 
     select.select {
       padding: 10px 14px;
@@ -165,6 +167,80 @@
       color: #2c4666;
       margin-bottom: 20px;
     }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+      width: 100%;
+      max-width: 1080px;
+      max-height: calc(100vh - 60px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 20px 24px 12px;
+      border-bottom: 1px solid #eee;
+      flex-wrap: wrap;
+    }
+    .modal-head h2 { font-size: 1.15rem; }
+    .modal-head .sub { color: #888; font-size: 0.82rem; margin-top: 2px; }
+    .modal-close {
+      background: none; color: #888; border: none; font-size: 1.4rem;
+      cursor: pointer; padding: 0 6px; line-height: 1;
+    }
+    .modal-close:hover { color: #333; background: none; }
+    .modal-toolbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 24px; flex-wrap: wrap;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .modal-toolbar input[type="text"] {
+      flex: 1; min-width: 180px;
+      padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px;
+      font-size: 0.85rem; outline: none;
+    }
+    .modal-toolbar input[type="text"]:focus { border-color: #4a90d9; }
+    .modal-toolbar label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: #555; cursor: pointer; white-space: nowrap; }
+    .modal-summary { display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.8rem; color: #555; }
+    .modal-summary b { color: #2c4666; }
+    .table-wrap { overflow: auto; flex: 1; }
+    table.gsc {
+      width: 100%; border-collapse: collapse; font-size: 0.82rem;
+    }
+    table.gsc th, table.gsc td {
+      padding: 7px 12px; text-align: left; border-bottom: 1px solid #f0f0f0;
+      white-space: nowrap;
+    }
+    table.gsc th {
+      position: sticky; top: 0; background: #f7f9fc; color: #44597a;
+      font-weight: 600; cursor: pointer; user-select: none; z-index: 1;
+    }
+    table.gsc th.num, table.gsc td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    table.gsc th .arrow { color: #4a90d9; font-size: 0.7rem; margin-left: 3px; }
+    table.gsc td.q { font-weight: 600; color: #333; max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+    table.gsc td.p { color: #4a6f9a; max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+    table.gsc td.p a { color: #4a6f9a; text-decoration: none; }
+    table.gsc td.p a:hover { text-decoration: underline; }
+    table.gsc tbody tr:hover { background: #fafcff; }
+    .table-empty { padding: 40px; text-align: center; color: #aaa; font-size: 0.9rem; }
   </style>
 </head>
 <body>
@@ -194,6 +270,27 @@
     </div>
 
     <div id="listArea" class="list"><div class="empty">サイトを選ぶと一覧が表示されます。</div></div>
+  </div>
+
+  <!-- データ閲覧モーダル -->
+  <div class="modal-backdrop" id="rowsBackdrop">
+    <div class="modal" role="dialog" aria-labelledby="rowsTitle">
+      <div class="modal-head">
+        <div>
+          <h2 id="rowsTitle">スナップショット</h2>
+          <div class="sub" id="rowsSub"></div>
+        </div>
+        <button class="modal-close" id="rowsClose" aria-label="閉じる">×</button>
+      </div>
+      <div class="modal-toolbar">
+        <input type="text" id="rowsFilter" placeholder="クエリ・ページで絞り込み...">
+        <label><input type="checkbox" id="aggToggle"> クエリ単位で集計</label>
+        <div class="modal-summary" id="rowsSummary"></div>
+      </div>
+      <div class="table-wrap" id="rowsTableWrap">
+        <div class="table-empty">読み込み中...</div>
+      </div>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -281,12 +378,183 @@
               </div>
             </div>
             <div class="card-actions">
+              <button class="small" type="button" data-action="view" data-id="${s.id}">データを見る</button>
               <a href="/gsc/snapshots/${s.id}/export.xlsx">
                 <button class="small ghost" type="button">Excel ダウンロード</button>
               </a>
+              <button class="small danger" type="button" data-action="delete" data-id="${s.id}" data-rows="${s.rowCount}">削除</button>
             </div>
           </div>`;
       }).join('');
+    }
+
+    // ── データ閲覧モーダル ──
+    const rowsBackdrop = $('rowsBackdrop');
+    const rowsTitle = $('rowsTitle');
+    const rowsSub = $('rowsSub');
+    const rowsFilter = $('rowsFilter');
+    const aggToggle = $('aggToggle');
+    const rowsSummary = $('rowsSummary');
+    const rowsTableWrap = $('rowsTableWrap');
+
+    let currentRows = [];        // 取得した生データ
+    let sortKey = 'impressions'; // 既定の並べ替え
+    let sortDir = 'desc';
+
+    const COLS = [
+      { key: 'query', label: 'クエリ', cls: 'q' },
+      { key: 'page', label: 'ページ', cls: 'p' },
+      { key: 'clicks', label: 'クリック', cls: 'num' },
+      { key: 'impressions', label: '表示回数', cls: 'num' },
+      { key: 'ctr', label: 'CTR', cls: 'num' },
+      { key: 'position', label: '掲載順位', cls: 'num' },
+    ];
+
+    function closeRows() { rowsBackdrop.classList.remove('show'); }
+
+    async function openRows(id) {
+      rowsTitle.textContent = `スナップショット #${id}`;
+      rowsSub.textContent = '';
+      rowsSummary.innerHTML = '';
+      rowsFilter.value = '';
+      aggToggle.checked = false;
+      sortKey = 'impressions';
+      sortDir = 'desc';
+      currentRows = [];
+      rowsTableWrap.innerHTML = '<div class="table-empty">読み込み中...</div>';
+      rowsBackdrop.classList.add('show');
+      try {
+        const res = await fetch(`/gsc/snapshots/${encodeURIComponent(id)}/rows`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        currentRows = data.rows || [];
+        rowsSub.textContent = `${data.startDate} 〜 ${data.endDate} ／ ${data.rowCount.toLocaleString()} 行`;
+        renderRows();
+      } catch (err) {
+        rowsTableWrap.innerHTML = `<div class="table-empty">取得失敗: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    // クエリ単位の集計（表示回数で加重平均の順位、CTR は再計算）
+    function aggregateByQuery(rows) {
+      const map = new Map();
+      for (const r of rows) {
+        let a = map.get(r.query);
+        if (!a) { a = { query: r.query, clicks: 0, impressions: 0, posWeighted: 0, pages: new Set() }; map.set(r.query, a); }
+        a.clicks += r.clicks;
+        a.impressions += r.impressions;
+        a.posWeighted += r.position * r.impressions;
+        if (r.page) a.pages.add(r.page);
+      }
+      return [...map.values()].map(a => ({
+        query: a.query,
+        page: `${a.pages.size} ページ`,
+        _pageCount: a.pages.size,
+        clicks: a.clicks,
+        impressions: a.impressions,
+        ctr: a.impressions > 0 ? a.clicks / a.impressions : 0,
+        position: a.impressions > 0 ? a.posWeighted / a.impressions : 0,
+      }));
+    }
+
+    function renderRows() {
+      const agg = aggToggle.checked;
+      const q = rowsFilter.value.trim().toLowerCase();
+
+      let rows = agg ? aggregateByQuery(currentRows) : currentRows;
+      if (q) {
+        rows = rows.filter(r =>
+          (r.query || '').toLowerCase().includes(q) ||
+          (!agg && (r.page || '').toLowerCase().includes(q)),
+        );
+      }
+
+      rows = [...rows].sort((a, b) => {
+        const av = a[sortKey], bv = b[sortKey];
+        let cmp;
+        if (typeof av === 'number' && typeof bv === 'number') cmp = av - bv;
+        else cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'ja');
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+
+      // サマリ
+      const totClicks = rows.reduce((s, r) => s + r.clicks, 0);
+      const totImp = rows.reduce((s, r) => s + r.impressions, 0);
+      const avgCtr = totImp > 0 ? (totClicks / totImp) * 100 : 0;
+      rowsSummary.innerHTML =
+        `<span>件数 <b>${rows.length.toLocaleString()}</b></span>` +
+        `<span>クリック計 <b>${totClicks.toLocaleString()}</b></span>` +
+        `<span>表示回数計 <b>${totImp.toLocaleString()}</b></span>` +
+        `<span>平均CTR <b>${avgCtr.toFixed(2)}%</b></span>`;
+
+      if (rows.length === 0) {
+        rowsTableWrap.innerHTML = '<div class="table-empty">該当するデータがありません。</div>';
+        return;
+      }
+
+      const arrow = (k) => sortKey === k ? `<span class="arrow">${sortDir === 'asc' ? '▲' : '▼'}</span>` : '';
+      const thead = COLS.map(c =>
+        `<th class="${c.cls === 'num' ? 'num' : ''}" data-key="${c.key}">${c.label}${arrow(c.key)}</th>`,
+      ).join('');
+
+      const fmt = {
+        query: (r) => `<td class="q" title="${escapeHtml(r.query)}">${escapeHtml(r.query || '(なし)')}</td>`,
+        page: (r) => agg
+          ? `<td class="p">${escapeHtml(r.page)}</td>`
+          : `<td class="p" title="${escapeHtml(r.page || '')}">${r.page ? `<a href="${escapeHtml(r.page)}" target="_blank" rel="noreferrer">${escapeHtml(r.page)}</a>` : '—'}</td>`,
+        clicks: (r) => `<td class="num">${r.clicks.toLocaleString()}</td>`,
+        impressions: (r) => `<td class="num">${r.impressions.toLocaleString()}</td>`,
+        ctr: (r) => `<td class="num">${(r.ctr * 100).toFixed(2)}%</td>`,
+        position: (r) => `<td class="num">${r.position.toFixed(1)}</td>`,
+      };
+      const body = rows.map(r => `<tr>${COLS.map(c => fmt[c.key](r)).join('')}</tr>`).join('');
+
+      rowsTableWrap.innerHTML = `<table class="gsc"><thead><tr>${thead}</tr></thead><tbody>${body}</tbody></table>`;
+
+      rowsTableWrap.querySelectorAll('th[data-key]').forEach(th => {
+        th.addEventListener('click', () => {
+          const k = th.dataset.key;
+          if (sortKey === k) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+          else { sortKey = k; sortDir = (k === 'query' || k === 'page') ? 'asc' : 'desc'; }
+          renderRows();
+        });
+      });
+    }
+
+    rowsFilter.addEventListener('input', renderRows);
+    aggToggle.addEventListener('change', renderRows);
+    $('rowsClose').addEventListener('click', closeRows);
+    rowsBackdrop.addEventListener('click', (e) => { if (e.target === rowsBackdrop) closeRows(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && rowsBackdrop.classList.contains('show')) closeRows();
+    });
+
+    listArea.addEventListener('click', (e) => {
+      const viewBtn = e.target.closest('[data-action="view"]');
+      if (viewBtn) { openRows(viewBtn.dataset.id); return; }
+      const delBtn = e.target.closest('[data-action="delete"]');
+      if (delBtn) deleteSnapshot(delBtn);
+    });
+
+    async function deleteSnapshot(btn) {
+      const id = btn.dataset.id;
+      const rows = Number(btn.dataset.rows || 0).toLocaleString();
+      if (!confirm(`スナップショット #${id}（${rows}行）を削除します。\nデータ行も一緒に削除され、元に戻せません。よろしいですか？`)) return;
+      btn.disabled = true;
+      btn.textContent = '削除中...';
+      try {
+        const res = await fetch(`/gsc/snapshots/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || `HTTP ${res.status}`);
+        }
+        showToast(`スナップショット #${id} を削除しました`, true);
+        await loadSnapshots();
+      } catch (err) {
+        showToast(`削除失敗: ${err.message}`, false);
+        btn.disabled = false;
+        btn.textContent = '削除';
+      }
     }
 
     siteSelect.addEventListener('change', loadSnapshots);
