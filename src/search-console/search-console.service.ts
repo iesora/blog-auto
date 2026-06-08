@@ -259,6 +259,23 @@ export class SearchConsoleService {
     });
   }
 
+  /**
+   * スナップショットと配下の query 行を削除する。
+   * 参照しているキーワードプランの snapshot_id は NULL にして保護する
+   * （プラン自体は消さない）。
+   */
+  async deleteSnapshot(id: number): Promise<void> {
+    await this.dataSource.transaction(async (em) => {
+      await em.query(
+        'UPDATE keyword_plans SET snapshot_id = NULL WHERE snapshot_id = ?',
+        [id],
+      );
+      await em.delete(GscQueryRow, { snapshotId: id });
+      await em.delete(GscSnapshot, { id });
+    });
+    this.logger.log(`GSC snapshot deleted id=${id} (rows cascaded)`);
+  }
+
   // ── Excel / CSV エクスポート（既存と同等） ──
 
   async toXlsx(result: SearchAnalyticsResult): Promise<Buffer> {

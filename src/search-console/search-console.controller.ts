@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -85,7 +86,15 @@ export class SearchConsoleController {
     return this.streamXlsx(
       res,
       ['query'],
-      { startDate, endDate, dimensions, rowLimit, startRow, searchType, dataState },
+      {
+        startDate,
+        endDate,
+        dimensions,
+        rowLimit,
+        startRow,
+        searchType,
+        dataState,
+      },
       siteUrl,
     );
   }
@@ -106,7 +115,15 @@ export class SearchConsoleController {
     return this.streamCsv(
       res,
       ['query'],
-      { startDate, endDate, dimensions, rowLimit, startRow, searchType, dataState },
+      {
+        startDate,
+        endDate,
+        dimensions,
+        rowLimit,
+        startRow,
+        searchType,
+        dataState,
+      },
       siteUrl,
     );
   }
@@ -139,6 +156,36 @@ export class SearchConsoleController {
       rowCount: s.rowCount,
       takenAt: s.takenAt,
     }));
+  }
+
+  @Get('gsc/snapshots/:id/rows')
+  async snapshotRows(@Param('id', ParseIntPipe) id: number) {
+    const snapshot = await this.service.findSnapshot(id);
+    if (!snapshot) throw new NotFoundException(`snapshot ${id} not found`);
+    const rows = await this.service.loadSnapshotRows(id);
+    return {
+      id: snapshot.id,
+      siteSlug: snapshot.site?.slug,
+      startDate: snapshot.startDate,
+      endDate: snapshot.endDate,
+      rowCount: rows.length,
+      rows: rows.map((r) => ({
+        query: r.query,
+        page: r.page,
+        clicks: r.clicks,
+        impressions: r.impressions,
+        ctr: r.ctr,
+        position: r.position,
+      })),
+    };
+  }
+
+  @Delete('gsc/snapshots/:id')
+  async deleteSnapshot(@Param('id', ParseIntPipe) id: number) {
+    const snapshot = await this.service.findSnapshot(id);
+    if (!snapshot) throw new NotFoundException(`snapshot ${id} not found`);
+    await this.service.deleteSnapshot(id);
+    return { id, deleted: true };
   }
 
   @Get('gsc/snapshots/:id/export.xlsx')
