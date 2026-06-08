@@ -569,7 +569,6 @@
         const runClass = it.lastRun
           ? (it.lastRun.status === 'success' ? 'run-success' : 'run-failed')
           : '';
-        const runLabel = it.lastRun?.status === 'success' ? '再実行' : '今すぐ実行';
         const siteTag = it.siteName
           ? `<span class="site-tag">${escapeHtml(it.siteName)}</span>`
           : '';
@@ -590,7 +589,7 @@
             </div>
             <div class="card-actions">
               <button class="ghost small" data-action="edit">編集</button>
-              <button class="ghost small" data-action="run">${runLabel}</button>
+              <button class="small danger" data-action="delete">削除</button>
             </div>
           </div>
         `;
@@ -603,8 +602,8 @@
           const entry = items.find((x) => x.id === id);
           if (!entry) return;
           const action = e.currentTarget.dataset.action;
-          if (action === 'run') {
-            await runEntry(entry, e.currentTarget);
+          if (action === 'delete') {
+            await deleteEntry(entry, e.currentTarget);
           } else if (action === 'edit') {
             openModal(entry);
           }
@@ -612,26 +611,22 @@
       });
     }
 
-    async function runEntry(entry, btn) {
+    async function deleteEntry(entry, btn) {
+      const site = entry.siteName ? `（${entry.siteName}）` : '';
+      if (!confirm(`${entry.date}${site} のスケジュールを削除します。\n実行履歴も一緒に削除され、元に戻せません。よろしいですか？`)) return;
       const original = btn.textContent;
       btn.disabled = true;
-      btn.textContent = '実行中...';
+      btn.textContent = '削除中...';
       try {
-        const res = await fetch(`/schedules/run/${entry.date}`, { method: 'POST' });
+        const res = await fetch(`/schedules/${entry.id}`, { method: 'DELETE' });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.message || `HTTP ${res.status}`);
         }
-        const data = await res.json();
-        if (data.processed === 0) {
-          showToast(`${entry.date} の実行対象がありません（approved 状態のみ実行されます）`, false);
-        } else {
-          showToast(`${entry.date} を実行しました（処理 ${data.processed} 件 / 成功 ${data.succeeded} / 失敗 ${data.failed}）`, data.failed === 0);
-        }
+        showToast(`${entry.date} のスケジュールを削除しました`, true);
         loadList();
       } catch (err) {
-        showToast(`実行に失敗しました: ${err.message}`, false);
-      } finally {
+        showToast(`削除に失敗しました: ${err.message}`, false);
         btn.disabled = false;
         btn.textContent = original;
       }

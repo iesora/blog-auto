@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -40,11 +41,13 @@ export class SchedulerController {
   }
 
   @Patch(':id')
-  patch(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: PatchScheduleDto,
-  ) {
+  patch(@Param('id', ParseIntPipe) id: number, @Body() dto: PatchScheduleDto) {
     return this.schedulerService.patch(id, dto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.schedulerService.remove(id);
   }
 
   // ── Cloud Scheduler から呼ばれるエンドポイント（OIDC Guard で保護） ──
