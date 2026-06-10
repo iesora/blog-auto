@@ -97,7 +97,8 @@ export class SchedulerService {
       categoryNames: dto.categoryNames,
       tagNames: dto.tagNames,
       inlineImageCount: dto.inlineImageCount,
-      status: dto.status ?? 'pending',
+      // 手動登録は人が明示的に追加したもの = 承認済みとして扱い、投稿対象かつ一覧表示にする
+      status: dto.status ?? 'approved',
       source: 'manual',
     });
     saved.site = site;

@@ -56,6 +56,8 @@ export class SchedulerStorageService {
     const qb = this.scheduleRepo
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.site', 'site')
+      // 未承認(pending)・棄却(skipped)は一覧に出さず、承認済みのみ表示する
+      .where('s.status = :approved', { approved: 'approved' })
       .orderBy('s.scheduledDate', 'ASC')
       .addOrderBy('site.id', 'ASC');
     if (opts.siteSlug)
