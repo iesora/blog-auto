@@ -321,13 +321,15 @@
           listArea.innerHTML = `<div class="empty">先に <a href="/sites.html" style="color:#4a90d9;">サイト管理</a> でサイトを登録してください。</div>`;
           return;
         }
-        siteSelect.innerHTML = '<option value="">サイトを選んでください</option>';
+        siteSelect.innerHTML = '';
         sites.forEach(s => {
           const o = document.createElement('option');
           o.value = s.slug;
           o.textContent = `${s.name}（${s.slug}）`;
           siteSelect.appendChild(o);
         });
+        // 既定で登録が一番古いサイト（/sites は id 昇順）を選択して一覧を表示
+        await loadSnapshots();
       } catch (err) {
         showToast(`サイト読み込み失敗: ${err.message}`, false);
       }

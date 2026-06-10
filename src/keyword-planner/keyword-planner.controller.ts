@@ -7,9 +7,7 @@ import {
   ParseIntPipe,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
-import { OidcAuthGuard } from '../scheduler/oidc-auth.guard';
 import { ApprovePlanDto } from './keyword-planner.dto';
 import { KeywordPlannerService } from './keyword-planner.service';
 
@@ -17,18 +15,16 @@ import { KeywordPlannerService } from './keyword-planner.service';
 export class KeywordPlannerController {
   constructor(private readonly service: KeywordPlannerService) {}
 
-  /** Cloud Scheduler から叩く。全 active サイトの新プランを draft で作成。 */
+  /** 管理画面から手動で叩く。全 active サイトの新プランを draft で作成。 */
   @Post('plan-next-cycle')
   @HttpCode(200)
-  @UseGuards(OidcAuthGuard)
   planNextCycle() {
     return this.service.planNextCycle();
   }
 
-  /** 1サイトだけ再生成。管理画面から叩かれる想定 (OIDC_BYPASS=true ローカル可)。 */
+  /** 管理画面から手動で叩く。1サイトだけ再生成。 */
   @Post('plan/:siteSlug')
   @HttpCode(200)
-  @UseGuards(OidcAuthGuard)
   planForSlug(@Param('siteSlug') slug: string) {
     return this.service.planForSlug(slug);
   }
