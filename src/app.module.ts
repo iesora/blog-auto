@@ -8,6 +8,7 @@ import { BlogGeneratorModule } from './blog-generator/blog-generator.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { SearchConsoleModule } from './search-console/search-console.module';
 import { KeywordPlannerModule } from './keyword-planner/keyword-planner.module';
+import { MarketingPlannerModule } from './marketing-planner/marketing-planner.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { KeywordPlannerModule } from './keyword-planner/keyword-planner.module';
     SchedulerModule,
     SearchConsoleModule,
     KeywordPlannerModule,
+    MarketingPlannerModule,
   ],
   controllers: [AppController],
 })

@@ -10,6 +10,7 @@ import {
   Site,
 } from '../entities';
 import { InitV2Schema1715817600000 } from '../migrations/1715817600000-InitV2Schema';
+import { AddMarketingStrategyToSnapshots1781600000000 } from '../migrations/1781600000000-AddMarketingStrategyToSnapshots';
 
 const ENTITIES = [
   Site,
@@ -20,7 +21,10 @@ const ENTITIES = [
   GscQueryRow,
 ];
 
-const MIGRATIONS = [InitV2Schema1715817600000];
+const MIGRATIONS = [
+  InitV2Schema1715817600000,
+  AddMarketingStrategyToSnapshots1781600000000,
+];
 
 @Module({
   imports: [

@@ -62,6 +62,8 @@
     button.small { padding: 6px 12px; font-size: 0.8rem; }
     button.danger { background: #d96a6a; }
     button.danger:hover { background: #c25555; }
+    button.plan { background: #2e9e7b; }
+    button.plan:hover { background: #258063; }
 
     select.select {
       padding: 10px 14px;
@@ -156,7 +158,9 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       color: #444;
     }
-    .card-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+    .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: stretch; }
+    .card-actions > a { display: block; }
+    .card-actions button { width: 100%; }
 
     .info {
       background: #eef4ff;
@@ -241,15 +245,37 @@
     table.gsc td.p a:hover { text-decoration: underline; }
     table.gsc tbody tr:hover { background: #fafcff; }
     .table-empty { padding: 40px; text-align: center; color: #aaa; font-size: 0.9rem; }
+
+    /* マーケティング戦略モーダル */
+    .plan-body { overflow: auto; flex: 1; padding: 20px 28px 28px; line-height: 1.7; color: #2c3a4a; font-size: 0.92rem; }
+    .plan-body.center { display: flex; align-items: center; justify-content: center; color: #888; }
+    .plan-body h1, .plan-body h2, .plan-body h3 { color: #1f3350; line-height: 1.4; }
+    .plan-body h1 { font-size: 1.3rem; margin: 18px 0 10px; }
+    .plan-body h2 { font-size: 1.12rem; margin: 22px 0 10px; padding-bottom: 5px; border-bottom: 2px solid #eef1f5; }
+    .plan-body h3 { font-size: 1rem; margin: 16px 0 8px; }
+    .plan-body p { margin: 8px 0; }
+    .plan-body ul, .plan-body ol { margin: 8px 0 8px 22px; }
+    .plan-body li { margin: 4px 0; }
+    .plan-body strong { color: #1f3350; }
+    .plan-body code { background: #f1f4f8; padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+    .plan-body table { border-collapse: collapse; margin: 10px 0; font-size: 0.85rem; }
+    .plan-body th, .plan-body td { border: 1px solid #e3e8ef; padding: 5px 10px; text-align: left; }
+    .plan-body th { background: #f7f9fc; color: #44597a; }
+    .plan-spinner {
+      width: 28px; height: 28px; border: 3px solid #d9e6f5; border-top-color: #2e9e7b;
+      border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .plan-loading { display: flex; align-items: center; }
   </style>
 </head>
 <body>
   <div class="nav">
-    <a href="/sites.html">サイト管理</a>
     <a href="/">スケジュール一覧</a>
-    <a href="/generate.html">即時生成</a>
     <a href="/keyword-plans.html">キーワード生成</a>
+    <a href="/generate.html">即時生成</a>
     <span class="current">データ分析</span>
+    <a href="/sites.html">サイト管理</a>
   </div>
 
   <div class="page">
@@ -289,6 +315,22 @@
       </div>
       <div class="table-wrap" id="rowsTableWrap">
         <div class="table-empty">読み込み中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- マーケティング戦略モーダル -->
+  <div class="modal-backdrop" id="planBackdrop">
+    <div class="modal" role="dialog" aria-labelledby="planTitle">
+      <div class="modal-head">
+        <div>
+          <h2 id="planTitle">マーケティング戦略</h2>
+          <div class="sub" id="planSub"></div>
+        </div>
+        <button class="modal-close" id="planClose" aria-label="閉じる">×</button>
+      </div>
+      <div class="plan-body center" id="planBody">
+        <div class="plan-loading"><span class="plan-spinner"></span>サイトを選ぶと一覧が表示されます。</div>
       </div>
     </div>
   </div>
@@ -354,11 +396,20 @@
       }
     }
 
+    // snapshotId -> 表示ラベル（"サイト名 データ分析#n"）。各モーダル/ダイアログで共有
+    const snapshotLabels = {};
+    const snapLabel = (id) => snapshotLabels[id] || `データ分析#${id}`;
+
     function renderSnapshots(snapshots) {
       if (!snapshots.length) {
         listArea.innerHTML = `<div class="empty">このサイトのスナップショットはまだありません。<br>「＋ 新規スナップショット取得」で取得できます。</div>`;
         return;
       }
+      const siteName = (sites.find(x => x.slug === siteSelect.value) || {}).name || '';
+      // 取得が古い順に 1,2,3... を採番（採番は固定。表示は新しい順）
+      [...snapshots]
+        .sort((a, b) => new Date(a.takenAt).getTime() - new Date(b.takenAt).getTime())
+        .forEach((s, i) => { snapshotLabels[s.id] = `${siteName} データ分析#${i + 1}`; });
       const sorted = [...snapshots].sort((a, b) =>
         new Date(b.takenAt).getTime() - new Date(a.takenAt).getTime(),
       );
@@ -372,7 +423,7 @@
             </div>
             <div class="card-body">
               <div class="card-title">
-                <span>スナップショット #${s.id}</span>
+                <span>${escapeHtml(snapLabel(s.id))}</span>
               </div>
               <div class="range">${escapeHtml(s.startDate)} 〜 ${escapeHtml(s.endDate)}</div>
               <div class="meta">
@@ -381,6 +432,7 @@
             </div>
             <div class="card-actions">
               <button class="small" type="button" data-action="view" data-id="${s.id}">データを見る</button>
+              <button class="small plan" type="button" data-action="plan" data-id="${s.id}" data-has-plan="${s.marketingGeneratedAt ? '1' : '0'}">マーケティング戦略</button>
               <a href="/gsc/snapshots/${s.id}/export.xlsx">
                 <button class="small ghost" type="button">Excel ダウンロード</button>
               </a>
@@ -415,7 +467,7 @@
     function closeRows() { rowsBackdrop.classList.remove('show'); }
 
     async function openRows(id) {
-      rowsTitle.textContent = `スナップショット #${id}`;
+      rowsTitle.textContent = snapLabel(id);
       rowsSub.textContent = '';
       rowsSummary.innerHTML = '';
       rowsFilter.value = '';
@@ -534,14 +586,130 @@
     listArea.addEventListener('click', (e) => {
       const viewBtn = e.target.closest('[data-action="view"]');
       if (viewBtn) { openRows(viewBtn.dataset.id); return; }
+      const planBtn = e.target.closest('[data-action="plan"]');
+      if (planBtn) { openPlan(planBtn); return; }
       const delBtn = e.target.closest('[data-action="delete"]');
       if (delBtn) deleteSnapshot(delBtn);
     });
 
+    // ── マーケティング戦略モーダル ──
+    const planBackdrop = $('planBackdrop');
+    const planSub = $('planSub');
+    const planBody = $('planBody');
+    // snapshotId -> 立案済みデータ（セッション内キャッシュ。2回目以降は再生成せずそのまま表示）
+    const planCache = {};
+
+    function closePlan() { planBackdrop.classList.remove('show'); }
+    $('planClose').addEventListener('click', closePlan);
+    planBackdrop.addEventListener('click', (e) => { if (e.target === planBackdrop) closePlan(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && planBackdrop.classList.contains('show')) closePlan();
+    });
+
+    function showPlanResult(data) {
+      // textContent で代入するため HTML エスケープは不要
+      planSub.textContent = `${data.siteName || data.siteSlug || ''} ／ ${data.startDate} 〜 ${data.endDate} ／ ${data.generatedBy}`;
+      planBody.className = 'plan-body';
+      planBody.innerHTML = renderMarkdown(data.strategy || '');
+    }
+
+    async function openPlan(btn) {
+      const id = btn.dataset.id;
+
+      // 1) セッション内キャッシュがあれば即表示
+      if (planCache[id]) {
+        showPlanResult(planCache[id]);
+        planBackdrop.classList.add('show');
+        return;
+      }
+
+      // 2) DB に立案済み（marketingGeneratedAt あり）: 確認なしで取得・表示
+      if (btn.dataset.hasPlan === '1') {
+        planSub.textContent = snapLabel(id);
+        planBody.className = 'plan-body center';
+        planBody.innerHTML = '<div class="plan-loading"><span class="plan-spinner"></span>立案済みの戦略を読み込んでいます...</div>';
+        planBackdrop.classList.add('show');
+        try {
+          const res = await fetch(`/gsc/snapshots/${encodeURIComponent(id)}/marketing-plan`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          planCache[id] = data;
+          showPlanResult(data);
+        } catch (err) {
+          planBody.className = 'plan-body center';
+          planBody.innerHTML = `<div style="color:#c25555;">読み込みに失敗しました: ${escapeHtml(err.message)}</div>`;
+        }
+        return;
+      }
+
+      // 3) 初回（未立案）: 確認ダイアログ → 生成 → DB 保存
+      if (!confirm('マーケティング戦略を立案しますか？')) return;
+
+      planSub.textContent = `${snapLabel(id)} を分析中...`;
+      planBody.className = 'plan-body center';
+      planBody.innerHTML = '<div class="plan-loading"><span class="plan-spinner"></span>Claude がマーケティング戦略を立案しています（30〜60秒程度）...</div>';
+      planBackdrop.classList.add('show');
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/gsc/snapshots/${encodeURIComponent(id)}/marketing-plan`, { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        planCache[id] = data;        // セッション内キャッシュ
+        btn.dataset.hasPlan = '1';   // 以後（リロード前）は確認なしで表示
+        showPlanResult(data);
+      } catch (err) {
+        planBody.className = 'plan-body center';
+        planBody.innerHTML = `<div style="color:#c25555;">立案に失敗しました: ${escapeHtml(err.message)}</div>`;
+        showToast(`立案失敗: ${err.message}`, false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // 軽量 Markdown → HTML（見出し・リスト・表・太字・コード・段落のみ対応）
+    function renderMarkdown(md) {
+      const lines = String(md).replace(/\r\n/g, '\n').split('\n');
+      const inline = (s) => escapeHtml(s)
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+      let html = '';
+      let listType = null;     // 'ul' | 'ol'
+      let tableRows = null;    // 表バッファ
+      const closeList = () => { if (listType) { html += `</${listType}>`; listType = null; } };
+      const flushTable = () => {
+        if (!tableRows) return;
+        const body = tableRows.filter(r => !/^\s*\|?[\s:|-]+\|?\s*$/.test(r));
+        html += '<table>' + body.map((r, i) => {
+          const cells = r.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+          const tag = i === 0 ? 'th' : 'td';
+          return '<tr>' + cells.map(c => `<${tag}>${inline(c)}</${tag}>`).join('') + '</tr>';
+        }).join('') + '</table>';
+        tableRows = null;
+      };
+      for (const raw of lines) {
+        const line = raw.replace(/\s+$/, '');
+        if (/^\s*\|.*\|\s*$/.test(line)) { closeList(); (tableRows ||= []).push(line.trim()); continue; }
+        flushTable();
+        if (!line.trim()) { closeList(); continue; }
+        let m;
+        if ((m = line.match(/^(#{1,3})\s+(.*)$/))) { closeList(); const n = m[1].length; html += `<h${n}>${inline(m[2])}</h${n}>`; continue; }
+        if ((m = line.match(/^\s*[-*]\s+(.*)$/))) { if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; } html += `<li>${inline(m[1])}</li>`; continue; }
+        if ((m = line.match(/^\s*\d+\.\s+(.*)$/))) { if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; } html += `<li>${inline(m[1])}</li>`; continue; }
+        closeList();
+        html += `<p>${inline(line)}</p>`;
+      }
+      flushTable();
+      closeList();
+      return html;
+    }
+
     async function deleteSnapshot(btn) {
       const id = btn.dataset.id;
       const rows = Number(btn.dataset.rows || 0).toLocaleString();
-      if (!confirm(`スナップショット #${id}（${rows}行）を削除します。\nデータ行も一緒に削除され、元に戻せません。よろしいですか？`)) return;
+      if (!confirm(`${snapLabel(id)}（${rows}行）を削除します。\nデータ行も一緒に削除され、元に戻せません。よろしいですか？`)) return;
       btn.disabled = true;
       btn.textContent = '削除中...';
       try {
@@ -550,7 +718,7 @@
           const err = await res.json().catch(() => ({}));
           throw new Error(err.message || `HTTP ${res.status}`);
         }
-        showToast(`スナップショット #${id} を削除しました`, true);
+        showToast(`${snapLabel(id)} を削除しました`, true);
         await loadSnapshots();
       } catch (err) {
         showToast(`削除失敗: ${err.message}`, false);

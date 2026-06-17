@@ -313,15 +313,43 @@
       }
       .date-block { padding-right: 16px; }
     }
+
+    /* スケジュール絞り込みフィルタ */
+    .filters {
+      display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 14px;
+      background: #fff; border: 1px solid #eee; border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 16px;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group > label { font-size: 0.78rem; color: #333; font-weight: 700; text-align: center; }
+    .filter-inline { display: flex; align-items: center; gap: 6px; }
+    .filter-inline .tilde { color: #999; }
+    /* 入力欄・セレクト・クリアボタン・件数をすべて同じ高さにして下端で揃える */
+    .filters .finput,
+    .filters .select,
+    .filters button,
+    .filter-count {
+      height: 34px;
+      box-sizing: border-box;
+    }
+    .filters .finput {
+      width: auto; padding: 0 10px; border: 1px solid #ddd; border-radius: 7px;
+      font-size: 0.85rem; font-family: inherit;
+    }
+    .filters .finput:focus { border-color: #4a90d9; }
+    .filters .finput.kw { min-width: 220px; }
+    .filters .select { padding: 0 14px; }
+    .filters button { padding: 0 16px; font-size: 0.85rem; }
+    .filter-count { display: inline-flex; align-items: center; color: #555; font-size: 0.82rem; }
   </style>
 </head>
 <body>
   <div class="nav">
-    <a href="/sites.html">サイト管理</a>
     <span class="current">スケジュール一覧</span>
-    <a href="/generate.html">即時生成</a>
     <a href="/keyword-plans.html">キーワード生成</a>
+    <a href="/generate.html">即時生成</a>
     <a href="/gsc-snapshots.html">データ分析</a>
+    <a href="/sites.html">サイト管理</a>
   </div>
 
   <div class="page">
@@ -336,6 +364,31 @@
         </select>
         <button id="openModalBtn" disabled>＋ 新規登録</button>
       </div>
+    </div>
+
+    <div class="filters">
+      <div class="filter-group">
+        <label>期間</label>
+        <div class="filter-inline">
+          <input type="date" id="filterFrom" class="finput">
+          <span class="tilde">〜</span>
+          <input type="date" id="filterTo" class="finput">
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>キーワード</label>
+        <input type="text" id="filterKeyword" class="finput kw" placeholder="キーワードで絞り込み">
+      </div>
+      <div class="filter-group">
+        <label>実行状況</label>
+        <select id="filterRun" class="select">
+          <option value="">すべて</option>
+          <option value="pending">未実行</option>
+          <option value="done">実行</option>
+        </select>
+      </div>
+      <button type="button" class="ghost small" id="filterClear">クリア</button>
+      <span class="filter-count" id="filterCount"></span>
     </div>
 
     <div id="listArea" class="list">
@@ -388,6 +441,12 @@
     const modalSiteName = document.getElementById('modalSiteName');
     const dateInput = document.getElementById('date');
     const siteSelect = document.getElementById('siteSelect');
+    const filterFrom = document.getElementById('filterFrom');
+    const filterTo = document.getElementById('filterTo');
+    const filterKeyword = document.getElementById('filterKeyword');
+    const filterRun = document.getElementById('filterRun');
+    const filterClear = document.getElementById('filterClear');
+    const filterCount = document.getElementById('filterCount');
 
     const WEEKDAY_JA = ['日', '月', '火', '水', '木', '金', '土'];
     const MONTH_LABEL = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
@@ -397,6 +456,7 @@
     let editingSiteSlug = null;
     let sites = [];
     let currentSiteSlug = null;
+    let allItems = [];   // 現在のサイトの全スケジュール（フィルタ前）
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, (c) => ({
@@ -536,11 +596,64 @@
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const items = await res.json();
-        renderList(items);
+        allItems = items;
+        applyFilters();
       } catch (err) {
         listArea.innerHTML = `<div class="empty">読み込みに失敗しました: ${escapeHtml(err.message)}</div>`;
       }
     }
+
+    // 期間・キーワード・実行状況でクライアント側絞り込み
+    function applyFilters() {
+      const from = filterFrom.value;            // 'YYYY-MM-DD' or ''
+      const to = filterTo.value;
+      const kw = filterKeyword.value.trim().toLowerCase();
+      const run = filterRun.value;              // '' | 'pending' | 'done'
+
+      const filtered = allItems.filter((it) => {
+        if (from && it.date < from) return false;
+        if (to && it.date > to) return false;
+        if (kw) {
+          const hay = [...(it.keywords || []), it.topic || '']
+            .join(' ').toLowerCase();
+          if (!hay.includes(kw)) return false;
+        }
+        if (run === 'pending' && it.lastRun) return false;
+        if (run === 'done' && !it.lastRun) return false;
+        return true;
+      });
+
+      const hasFilter = !!(from || to || kw || run);
+      filterCount.textContent = hasFilter
+        ? `${filtered.length} / ${allItems.length} 件`
+        : `${allItems.length} 件`;
+
+      if (!allItems.length) {
+        listArea.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">📅</div>
+            まだスケジュールがありません。<br>右上の「＋ 新規登録」から追加してください。
+          </div>`;
+        return;
+      }
+      if (!filtered.length) {
+        listArea.innerHTML = `<div class="empty">条件に一致するスケジュールがありません。</div>`;
+        return;
+      }
+      renderList(filtered);
+    }
+
+    [filterFrom, filterTo, filterKeyword].forEach((el) =>
+      el.addEventListener('input', applyFilters),
+    );
+    filterRun.addEventListener('change', applyFilters);
+    filterClear.addEventListener('click', () => {
+      filterFrom.value = '';
+      filterTo.value = '';
+      filterKeyword.value = '';
+      filterRun.value = '';
+      applyFilters();
+    });
 
     siteSelect.addEventListener('change', () => {
       currentSiteSlug = siteSelect.value;
