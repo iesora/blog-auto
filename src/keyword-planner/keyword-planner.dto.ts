@@ -8,6 +8,8 @@ export interface PlanDayItem {
   articleType: ArticleType;
   categoryNames?: string[];
   tagNames?: string[];
+  /** なぜこのキーワードを選んだかの簡易な生成理由（GSCデータ根拠）。 */
+  reason?: string;
 }
 
 export interface PlanResponseRaw {

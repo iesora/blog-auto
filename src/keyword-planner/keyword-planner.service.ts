@@ -395,6 +395,7 @@ export class KeywordPlannerService {
       articleType,
       categoryNames: d.categoryNames,
       tagNames: d.tagNames,
+      reason: d.reason ?? '',
     };
   }
 
@@ -436,6 +437,8 @@ export class KeywordPlannerService {
       '- 既存記事との重複を避け、内部リンク候補となる関連トピックを優先',
       `- ${CYCLE_DAYS}日分の article_type 分布の目安: SEO 60%, QA 25%, RANKING 10%, REPAIR_REPORT 5%`,
       '- offset は 0..27 の連番。重複させない',
+      '- reason には「なぜこのキーワードを選んだか」を日本語で簡潔に書く（1〜2文・最大60文字程度）。',
+      '  上記GSCデータの該当クエリ・数値（表示回数/CTR/掲載順位）を根拠として具体的に示すこと。',
       '',
       '# 出力（厳密な JSON、それ以外を含めない）',
       '{',
@@ -445,6 +448,7 @@ export class KeywordPlannerService {
       '      "keywords": ["メインキーワード", "サブ1", "サブ2"],',
       '      "topic": "...",',
       '      "articleType": "seo",',
+      '      "reason": "このキーワードを選んだ簡潔な理由（GSCデータ根拠）",',
       '      "categoryNames": ["..."],',
       '      "tagNames": ["..."]',
       `    } /* ... ${CYCLE_DAYS}件 ... */`,

@@ -6,6 +6,10 @@ import * as ExcelJS from 'exceljs';
 import { GoogleAuth, OAuth2Client } from 'google-auth-library';
 import { DataSource, Repository } from 'typeorm';
 import { GscQueryRow, GscSnapshot, Site } from '../entities';
+import { SitesService } from '../sites/sites.service';
+
+/** データ分析(スナップショット)を再取得する間隔（日）。 */
+const ANALYSIS_INTERVAL_DAYS = 28;
 
 export interface SearchAnalyticsQueryParams {
   startDate?: string;
@@ -35,6 +39,24 @@ export interface SearchAnalyticsResult {
   responseAggregationType?: string;
 }
 
+export interface ScheduledAnalysisItem {
+  siteSlug: string;
+  status: 'created' | 'skipped' | 'failed';
+  snapshotId?: number;
+  rowCount?: number;
+  lastTakenAt?: string;
+  error?: string;
+}
+
+export interface ScheduledAnalysisResult {
+  intervalDays: number;
+  processed: number;
+  created: number;
+  skipped: number;
+  failed: number;
+  results: ScheduledAnalysisItem[];
+}
+
 @Injectable()
 export class SearchConsoleService {
   private readonly logger = new Logger(SearchConsoleService.name);
@@ -50,6 +72,7 @@ export class SearchConsoleService {
     private readonly snapshotRepo: Repository<GscSnapshot>,
     @InjectRepository(GscQueryRow)
     private readonly rowRepo: Repository<GscQueryRow>,
+    private readonly sitesService: SitesService,
   ) {
     this.defaultSiteUrl =
       this.configService.get<string>('GSC_SITE_URL') ?? 'https://gakkiou.com/';
@@ -237,6 +260,70 @@ export class SearchConsoleService {
     });
   }
 
+  /**
+   * 全アクティブサイトについて、前回スナップショットから intervalDays 日以上
+   * 経過していれば新規スナップショットを取得する（毎日 cron で叩く想定）。
+   * 期間内のサイトはスキップするので、GSC API 消費は実際に取得する分だけ。
+   */
+  async runScheduledAnalysis(
+    intervalDays = ANALYSIS_INTERVAL_DAYS,
+  ): Promise<ScheduledAnalysisResult> {
+    const sites = await this.sitesService.listActive();
+    const cutoff = new Date(Date.now() - intervalDays * 24 * 60 * 60 * 1000);
+    this.logger.log(
+      `runScheduledAnalysis: ${sites.length} active sites, interval=${intervalDays}d`,
+    );
+
+    const settled = await Promise.allSettled(
+      sites.map(async (site): Promise<ScheduledAnalysisItem> => {
+        const latest = await this.snapshotRepo.findOne({
+          where: { siteId: site.id },
+          order: { takenAt: 'DESC' },
+        });
+        if (latest && latest.takenAt > cutoff) {
+          return {
+            siteSlug: site.slug,
+            status: 'skipped',
+            lastTakenAt: latest.takenAt.toISOString(),
+          };
+        }
+        const snap = await this.fetchAndStore(site);
+        return {
+          siteSlug: site.slug,
+          status: 'created',
+          snapshotId: snap.id,
+          rowCount: snap.rowCount,
+        };
+      }),
+    );
+
+    const results: ScheduledAnalysisItem[] = settled.map((s, i) =>
+      s.status === 'fulfilled'
+        ? s.value
+        : {
+            siteSlug: sites[i].slug,
+            status: 'failed',
+            error: (s.reason as Error)?.message ?? String(s.reason),
+          },
+    );
+
+    const created = results.filter((r) => r.status === 'created').length;
+    const skipped = results.filter((r) => r.status === 'skipped').length;
+    const failed = results.filter((r) => r.status === 'failed').length;
+    this.logger.log(
+      `runScheduledAnalysis done: created=${created}, skipped=${skipped}, failed=${failed}`,
+    );
+
+    return {
+      intervalDays,
+      processed: results.length,
+      created,
+      skipped,
+      failed,
+      results,
+    };
+  }
+
   async listSnapshotsForSite(siteId: number): Promise<GscSnapshot[]> {
     return this.snapshotRepo.find({
       where: { siteId },
@@ -256,6 +343,20 @@ export class SearchConsoleService {
     return this.rowRepo.find({
       where: { snapshotId },
       order: { impressions: 'DESC' },
+    });
+  }
+
+  /** 立案済みのマーケティング戦略をスナップショットへ永続化する。 */
+  async saveMarketingPlan(
+    snapshotId: number,
+    strategy: string,
+    generatedBy: string,
+    generatedAt: Date,
+  ): Promise<void> {
+    await this.snapshotRepo.update(snapshotId, {
+      marketingStrategy: strategy,
+      marketingGeneratedBy: generatedBy,
+      marketingGeneratedAt: generatedAt,
     });
   }
 

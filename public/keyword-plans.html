@@ -149,6 +149,8 @@
     }
 
     .card-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+    /* 詳細・承認・承認済みの幅を全カードで統一（最長「承認済み」に合わせる） */
+    .card-actions button, .card-actions .approved-tag { min-width: 88px; text-align: center; }
     .approved-tag {
       display: inline-block;
       padding: 6px 12px;
@@ -218,6 +220,11 @@
       color: #444;
       white-space: nowrap;
     }
+    .days-table td.reason {
+      color: #555; min-width: 180px; max-width: 320px; line-height: 1.5;
+      overflow-wrap: anywhere; word-break: break-word;  /* 長い英数字列でも必ず折り返す */
+    }
+    .reason-empty { color: #bbb; }
     .chip {
       background: #f0f6fc;
       color: #2c5d8a;
@@ -239,11 +246,11 @@
 </head>
 <body>
   <div class="nav">
-    <a href="/sites.html">サイト管理</a>
     <a href="/">スケジュール一覧</a>
-    <a href="/generate.html">即時生成</a>
     <span class="current">キーワード生成</span>
+    <a href="/generate.html">即時生成</a>
     <a href="/gsc-snapshots.html">データ分析</a>
+    <a href="/sites.html">サイト管理</a>
   </div>
 
   <div class="page">
@@ -255,7 +262,6 @@
       <div class="header-actions">
         <select id="filterSite" class="select"><option value="">全サイト</option></select>
         <button id="openPlanSingleBtn">キーワード生成</button>
-        <button id="planAllBtn">全サイトキーワード生成</button>
       </div>
     </div>
 
@@ -266,7 +272,7 @@
   <div class="modal-backdrop" id="planSiteModalBackdrop">
     <div class="modal" style="max-width: 460px;">
       <h2>キーワード生成</h2>
-      <p class="modal-subtitle">対象サイトを選んで「実行」をクリックしてください。全サイト分は別ボタン「全サイトキーワード生成」をご利用ください。</p>
+      <p class="modal-subtitle">対象サイトを選んで「実行」をクリックしてください。</p>
       <div class="field" style="margin-top: 16px;">
         <label for="planSiteInModal" style="display:block;font-size:0.85rem;font-weight:600;color:#555;margin-bottom:6px;">対象サイト</label>
         <select id="planSiteInModal" class="select" style="width:100%;">
@@ -298,7 +304,6 @@
     const $ = (id) => document.getElementById(id);
     const filterSite = $('filterSite');
     const openPlanSingleBtn = $('openPlanSingleBtn');
-    const planAllBtn = $('planAllBtn');
     const planSiteModalBackdrop = $('planSiteModalBackdrop');
     const planSiteInModal = $('planSiteInModal');
     const planSiteCancelBtn = $('planSiteCancelBtn');
@@ -353,7 +358,7 @@
       // 棄却フローは廃止したため rejected は一覧から除外
       const visible = plans.filter(p => p.status !== 'rejected');
       if (!visible.length) {
-        listArea.innerHTML = `<div class="empty">該当するキーワード生成結果がありません。<br>右上の「全サイトキーワード生成」から作成できます。</div>`;
+        listArea.innerHTML = `<div class="empty">該当するキーワード生成結果がありません。<br>右上の「キーワード生成」から作成できます。</div>`;
         return;
       }
       listArea.innerHTML = visible.map(p => {
@@ -416,12 +421,13 @@
               <td>${(d.keywords || []).map(k => `<span class="chip">${escapeHtml(k)}</span>`).join('')}</td>
               <td>${escapeHtml(d.topic || '')}</td>
               <td><code>${escapeHtml(d.articleType || '')}</code></td>
+              <td class="reason">${d.reason ? escapeHtml(d.reason) : '<span class="reason-empty">—</span>'}</td>
             </tr>`;
         }).join('');
         daysContainer.innerHTML = `
           <table class="days-table">
-            <thead><tr><th>日付</th><th>キーワード</th><th>トピック</th><th>記事タイプ</th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="4">days データなし</td></tr>'}</tbody>
+            <thead><tr><th>日付</th><th>キーワード</th><th>トピック</th><th>記事タイプ</th><th>生成理由</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="5">days データなし</td></tr>'}</tbody>
           </table>`;
         modalBackdrop.classList.add('show');
       } catch (err) {
@@ -499,24 +505,6 @@
       }
     });
 
-    planAllBtn.addEventListener('click', async () => {
-      if (!confirm('全 active サイトのキーワードを生成します。サイト数 × 1〜2 分かかります。よろしいですか？')) return;
-      planAllBtn.disabled = true;
-      try {
-        const res = await fetch('/keywords/plan-next-cycle', { method: 'POST' });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.message || `HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        showToast(`完了: ${data.succeeded}成功 / ${data.failed}失敗 / 計${data.processed}サイト`, data.failed === 0);
-        await loadPlans();
-      } catch (err) {
-        showToast(`生成失敗: ${err.message}`, false);
-      } finally {
-        planAllBtn.disabled = false;
-      }
-    });
 
     filterSite.addEventListener('change', loadPlans);
 

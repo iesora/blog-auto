@@ -2,6 +2,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   NotFoundException,
   Param,
   ParseIntPipe,
@@ -9,8 +10,10 @@ import {
   Query,
   Res,
   StreamableFile,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { OidcAuthGuard } from '../scheduler/oidc-auth.guard';
 import { SitesService } from '../sites/sites.service';
 import {
   SearchAnalyticsQueryParams,
@@ -130,6 +133,16 @@ export class SearchConsoleController {
 
   // ── 新規：snapshot 永続化系 ──
 
+  // Cloud Scheduler から毎日叩く。前回から 28 日以上経った active サイトだけ
+  // スナップショットを再取得する（OIDC Guard で保護）。
+  // 注意: ':siteSlug' ルートより前に定義して "run-all" がスラッグ扱いされるのを防ぐ。
+  @Post('gsc/snapshots/run-all')
+  @HttpCode(200)
+  @UseGuards(OidcAuthGuard)
+  runAllAnalysis() {
+    return this.service.runScheduledAnalysis();
+  }
+
   @Post('gsc/snapshots/:siteSlug')
   async createSnapshot(@Param('siteSlug') slug: string) {
     const site = await this.sitesService.findBySlug(slug);
@@ -155,6 +168,8 @@ export class SearchConsoleController {
       endDate: s.endDate,
       rowCount: s.rowCount,
       takenAt: s.takenAt,
+      // 立案済みかどうか（フロントが確認ダイアログの要否を判断するのに使う）
+      marketingGeneratedAt: s.marketingGeneratedAt ?? null,
     }));
   }
 
