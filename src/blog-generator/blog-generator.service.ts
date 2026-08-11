@@ -7,7 +7,10 @@ import {
   WordpressClient,
   WordpressService,
 } from '../wordpress/wordpress.service';
-import { ImageGeneratorService } from './image-generator.service';
+import {
+  GeneratedImage,
+  ImageGeneratorService,
+} from './image-generator.service';
 import { GenerateBlogDto, ArticleType } from './blog-generator.dto';
 import { buildPrompt } from './prompt-templates';
 
@@ -49,6 +52,8 @@ export interface GenerateForSiteResult {
   categories: string[];
   tags: string[];
   link?: string;
+  /** 画像の生成・アップロード失敗。空配列なら全て成功。 */
+  imageErrors: string[];
 }
 
 @Injectable()
@@ -149,6 +154,14 @@ export class BlogGeneratorService {
       `[${site.slug}] draft created: id=${post.id}, title="${blog.title}"`,
     );
 
+    const imageErrors = [...imageResults.errors, ...uploadedImages.errors];
+    if (imageErrors.length > 0) {
+      // 記事自体は投稿できているので失敗にはしないが、見逃されないよう error で残す
+      this.logger.error(
+        `[${site.slug}] post ${post.id} created with ${imageErrors.length} image error(s): ${imageErrors.join(' | ')}`,
+      );
+    }
+
     return {
       postId: post.id,
       title: blog.title,
@@ -163,6 +176,7 @@ export class BlogGeneratorService {
       categories: categoryNames,
       tags: tagNames,
       link: post.link,
+      imageErrors,
     };
   }
 
@@ -245,79 +259,94 @@ export class BlogGeneratorService {
 
   // ── 画像 ──
 
+  /** image/jpeg → jpg のようにアップロード用の拡張子を決める。 */
+  private extensionFor(mimeType: string): string {
+    const subtype = mimeType.split('/')[1] ?? 'png';
+    return subtype === 'jpeg' ? 'jpg' : subtype.replace(/[^a-z0-9]/gi, '');
+  }
+
   private async generateAllImages(
     title: string,
     articleType: ArticleType,
     sectionImageDefs: { altText: string; prompt: string }[],
   ): Promise<{
-    thumbnail: Buffer | null;
-    sections: (Buffer | null)[];
+    thumbnail: GeneratedImage | null;
+    sections: (GeneratedImage | null)[];
+    errors: string[];
   }> {
+    const errors: string[] = [];
     const promises = [
       this.imageGeneratorService
         .generateThumbnail(title, articleType)
-        .catch((err) => {
-          this.logger.warn(`Thumbnail generation failed: ${err.message}`);
+        .catch((err: Error) => {
+          const msg = `Thumbnail generation failed: ${err.message}`;
+          this.logger.error(msg);
+          errors.push(msg);
           return null;
         }),
       ...sectionImageDefs.map((def, i) =>
         this.imageGeneratorService
           .generateSectionImage(def.prompt)
-          .catch((err) => {
-            this.logger.warn(
-              `Section image ${i} generation failed: ${err.message}`,
-            );
+          .catch((err: Error) => {
+            const msg = `Section image ${i} generation failed: ${err.message}`;
+            this.logger.error(msg);
+            errors.push(msg);
             return null;
           }),
       ),
     ];
     const results = await Promise.all(promises);
-    return { thumbnail: results[0], sections: results.slice(1) };
+    return { thumbnail: results[0], sections: results.slice(1), errors };
   }
 
   private async uploadAllImages(
     wp: WordpressClient,
     title: string,
-    images: { thumbnail: Buffer | null; sections: (Buffer | null)[] },
+    images: {
+      thumbnail: GeneratedImage | null;
+      sections: (GeneratedImage | null)[];
+    },
   ): Promise<{
     thumbnailId: number | undefined;
     sections: { id: number; url: string }[];
+    errors: string[];
   }> {
     const slug = (
       title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || 'blog'
     ).substring(0, 50);
+    const errors: string[] = [];
     let thumbnailId: number | undefined;
 
     if (images.thumbnail) {
+      const { buffer, mimeType } = images.thumbnail;
       try {
-        const filename = `thumbnail-${slug}-${Date.now()}.png`;
-        const media = await wp.uploadMedia(
-          images.thumbnail,
-          filename,
-          'image/png',
-        );
+        const filename = `thumbnail-${slug}-${Date.now()}.${this.extensionFor(mimeType)}`;
+        const media = await wp.uploadMedia(buffer, filename, mimeType);
         thumbnailId = media.id;
       } catch (err) {
-        this.logger.warn(`Thumbnail upload failed: ${(err as Error).message}`);
+        const msg = `Thumbnail upload failed: ${(err as Error).message}`;
+        this.logger.error(msg);
+        errors.push(msg);
       }
     }
 
     const sections: { id: number; url: string }[] = [];
     for (let i = 0; i < images.sections.length; i++) {
-      const buf = images.sections[i];
-      if (!buf) continue;
+      const image = images.sections[i];
+      if (!image) continue;
+      const { buffer, mimeType } = image;
       try {
-        const filename = `section-${slug}-${i}-${Date.now()}.png`;
-        const media = await wp.uploadMedia(buf, filename, 'image/png');
+        const filename = `section-${slug}-${i}-${Date.now()}.${this.extensionFor(mimeType)}`;
+        const media = await wp.uploadMedia(buffer, filename, mimeType);
         sections.push({ id: media.id, url: media.source_url });
       } catch (err) {
-        this.logger.warn(
-          `Section image ${i} upload failed: ${(err as Error).message}`,
-        );
+        const msg = `Section image ${i} upload failed: ${(err as Error).message}`;
+        this.logger.error(msg);
+        errors.push(msg);
       }
     }
 
-    return { thumbnailId, sections };
+    return { thumbnailId, sections, errors };
   }
 
   // ── カテゴリ / タグ ──

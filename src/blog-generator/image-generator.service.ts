@@ -30,21 +30,46 @@ Respond with ONLY a JSON object in this exact format:
 
 const MAX_GENERATION_ATTEMPTS = 3;
 
+/**
+ * Imagen 4 系は 2026-08-17 に提供終了。後継の Gemini 画像モデルを既定にする。
+ * lite は現行の画像モデルで最安（$0.0336/枚）かつ最速で、記事のアイキャッチ用途では
+ * 上位の gemini-3.1-flash-image（$0.067/枚）と画質差が実用上ない。
+ */
+const DEFAULT_IMAGE_MODEL = 'gemini-3.1-flash-lite-image';
+const DEFAULT_SAFETY_MODEL = 'gemini-2.5-flash';
+
+/** 生成された画像。モデルによって PNG / JPEG が変わるため MIME を持ち回る。 */
+export interface GeneratedImage {
+  buffer: Buffer;
+  mimeType: string;
+}
+
 @Injectable()
 export class ImageGeneratorService {
   private readonly logger = new Logger(ImageGeneratorService.name);
   private readonly genai: GoogleGenAI;
+  private readonly imageModel: string;
+  private readonly safetyModel: string;
 
   constructor(private readonly configService: ConfigService) {
     this.genai = new GoogleGenAI({
       apiKey: this.configService.get<string>('GEMINI_API_KEY'),
     });
+    this.imageModel =
+      this.configService.get<string>('GEMINI_IMAGE_MODEL') ??
+      DEFAULT_IMAGE_MODEL;
+    this.safetyModel =
+      this.configService.get<string>('GEMINI_SAFETY_MODEL') ??
+      DEFAULT_SAFETY_MODEL;
+    this.logger.log(
+      `image model = ${this.imageModel}, safety model = ${this.safetyModel}`,
+    );
   }
 
   async generateThumbnail(
     blogTitle: string,
     articleType: ArticleType = ArticleType.SEO,
-  ): Promise<Buffer> {
+  ): Promise<GeneratedImage> {
     this.logger.log(`Generating thumbnail for: "${blogTitle}"`);
 
     const basePrompt = THUMBNAIL_PROMPTS[articleType];
@@ -53,7 +78,7 @@ export class ImageGeneratorService {
     return this.generateImageWithSafetyCheck(prompt);
   }
 
-  async generateSectionImage(prompt: string): Promise<Buffer> {
+  async generateSectionImage(prompt: string): Promise<GeneratedImage> {
     this.logger.log(`Generating section image`);
 
     const fullPrompt = prompt.includes('photorealistic')
@@ -63,13 +88,15 @@ export class ImageGeneratorService {
     return this.generateImageWithSafetyCheck(fullPrompt);
   }
 
-  private async generateImageWithSafetyCheck(prompt: string): Promise<Buffer> {
+  private async generateImageWithSafetyCheck(
+    prompt: string,
+  ): Promise<GeneratedImage> {
     for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
-      const buffer = await this.generateImage(prompt);
-      const safetyResult = await this.checkImageSafety(buffer);
+      const image = await this.generateImage(prompt);
+      const safetyResult = await this.checkImageSafety(image);
 
       if (safetyResult.safe) {
-        return buffer;
+        return image;
       }
 
       this.logger.warn(
@@ -87,20 +114,20 @@ export class ImageGeneratorService {
   }
 
   private async checkImageSafety(
-    imageBuffer: Buffer,
+    image: GeneratedImage,
   ): Promise<{ safe: boolean; reason?: string }> {
     try {
-      const base64Image = imageBuffer.toString('base64');
+      const base64Image = image.buffer.toString('base64');
 
       const response = await this.genai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: this.safetyModel,
         contents: [
           {
             role: 'user',
             parts: [
               {
                 inlineData: {
-                  mimeType: 'image/png',
+                  mimeType: image.mimeType,
                   data: base64Image,
                 },
               },
@@ -129,22 +156,32 @@ export class ImageGeneratorService {
     }
   }
 
-  private async generateImage(prompt: string): Promise<Buffer> {
-    const response = await this.genai.models.generateImages({
-      model: 'imagen-4.0-generate-001',
-      prompt,
-      config: {
-        numberOfImages: 1,
-      },
+  private async generateImage(prompt: string): Promise<GeneratedImage> {
+    const response = await this.genai.models.generateContent({
+      model: this.imageModel,
+      contents: prompt,
     });
 
-    const image = response.generatedImages?.[0];
-    if (!image?.image?.imageBytes) {
-      throw new Error('Failed to generate image');
+    const parts = response.candidates?.[0]?.content?.parts ?? [];
+    const imagePart = parts.find((p) => p.inlineData?.data);
+
+    if (!imagePart?.inlineData?.data) {
+      // 画像が返らない場合、モデルは理由をテキストで返すことがある（安全フィルタ等）
+      const reason =
+        parts
+          .map((p) => p.text)
+          .filter(Boolean)
+          .join(' ')
+          .slice(0, 200) ||
+        `finishReason=${response.candidates?.[0]?.finishReason ?? 'unknown'}`;
+      throw new Error(
+        `Failed to generate image (${this.imageModel}): ${reason}`,
+      );
     }
 
-    const buffer = Buffer.from(image.image.imageBytes, 'base64');
-    this.logger.log(`Image generated: ${buffer.length} bytes`);
-    return buffer;
+    const buffer = Buffer.from(imagePart.inlineData.data, 'base64');
+    const mimeType = imagePart.inlineData.mimeType ?? 'image/png';
+    this.logger.log(`Image generated: ${buffer.length} bytes (${mimeType})`);
+    return { buffer, mimeType };
   }
 }
