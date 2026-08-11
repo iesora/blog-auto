@@ -131,7 +131,7 @@ export class ImageGeneratorService {
 
   private async generateImage(prompt: string): Promise<Buffer> {
     const response = await this.genai.models.generateImages({
-      model: 'imagen-4.0-fast-generate-001',
+      model: 'imagen-4.0-generate-001',
       prompt,
       config: {
         numberOfImages: 1,
