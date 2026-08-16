@@ -28,8 +28,12 @@ import {
 } from './keyword-planner.dto';
 
 const CYCLE_DAYS = 28;
-/** サイクル終了の何日前から次サイクルを生成するか（欠測防止 + 承認の猶予）。 */
-const PLAN_LEAD_DAYS = 3;
+/**
+ * サイクル終了の何日前から次サイクルを生成するか。
+ * 次サイクルは「既存最終日の翌日」から始まるので日付は重ならない。
+ * この値は承認の猶予を何日確保するかだけを決める。
+ */
+const PLAN_LEAD_DAYS = 1;
 const TOP_QUERY_LIMIT = 50;
 
 @Injectable()
@@ -69,10 +73,28 @@ export class KeywordPlannerService {
     return `${y}-${m}-${dd}`;
   }
 
-  private nextCycleRange(): { start: Date; end: Date } {
+  /**
+   * 次サイクルの範囲を決める。
+   *
+   * 直前のサイクルがまだ終わっていなければ「その最終日の翌日」から始める。
+   * こうすることで前倒し生成しても既存サイクルと日付が重ならない。
+   * 直前サイクルが既に終わっている（または初回）なら明日から始める。
+   */
+  private async nextCycleRangeFor(
+    siteId: number,
+  ): Promise<{ start: Date; end: Date }> {
     const tomorrow = this.addDays(new Date(), 1);
-    const end = this.addDays(tomorrow, CYCLE_DAYS - 1);
-    return { start: tomorrow, end };
+    const latest = await this.planRepo.findOne({
+      where: { siteId, status: In(['draft', 'approved']) },
+      order: { cycleEnd: 'DESC' },
+    });
+
+    let start = tomorrow;
+    if (latest) {
+      const afterPrev = this.addDays(new Date(latest.cycleEnd), 1);
+      if (afterPrev.getTime() > start.getTime()) start = afterPrev;
+    }
+    return { start, end: this.addDays(start, CYCLE_DAYS - 1) };
   }
 
   // ── plan-next-cycle ──
@@ -87,8 +109,8 @@ export class KeywordPlannerService {
    * 最終日に生成しても承認の猶予が実質ゼロになってしまう。
    * そのため終了の PLAN_LEAD_DAYS 日前から次サイクルを前倒しで生成する。
    *
-   * 前倒しで重なる数日分は upsertProtectingApproved が承認済みエントリを保護するので
-   * 二重投稿にはならない（重複分は insertedSchedules に数えられない）。
+   * 前倒しで生成しても、次サイクルは nextCycleRangeFor() が既存最終日の翌日から
+   * 始めるため日付は重複しない。
    *
    * rejected は作り直したいので対象外。draft は承認待ちなだけでサイクルは
    * 埋まっているため、再生成せず承認を待つ。
@@ -204,7 +226,7 @@ export class KeywordPlannerService {
       );
     }
 
-    const cycle = this.nextCycleRange();
+    const cycle = await this.nextCycleRangeFor(site.id);
     const cycleStart = this.toDateString(cycle.start);
     const cycleEnd = this.toDateString(cycle.end);
 
