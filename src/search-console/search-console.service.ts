@@ -201,26 +201,36 @@ export class SearchConsoleService {
   }
 
   /**
-   * 直近28日のクエリ × ページ次元データを GSC から取得し DB に保存。
-   * 戻り値は作成された snapshot レコード。
+   * 直近28日のクエリ × ページ次元データを GSC から取得する。**DB には保存しない。**
+   *
+   * キーワード生成のように「取得してその場で使うだけ」の用途向け。保存すると
+   * 分析ジョブ (runScheduledAnalysis) が作るスナップショットと二重になるため、
+   * 永続化したい場合だけ fetchAndStore を使うこと。
    */
-  async fetchAndStore(site: Site): Promise<GscSnapshot> {
+  async fetchRecentRows(site: Site): Promise<SearchAnalyticsResult> {
     const today = new Date();
     const start = new Date(today);
     start.setDate(start.getDate() - 28);
-    const startDate = this.formatDate(start);
-    const endDate = this.formatDate(today);
 
-    const result = await this.searchAnalyticsQuery(
+    return this.searchAnalyticsQuery(
       {
-        startDate,
-        endDate,
+        startDate: this.formatDate(start),
+        endDate: this.formatDate(today),
         dimensions: ['query', 'page'],
         rowLimit: 5000,
         dataState: 'final',
       },
       site.gscSiteUrl,
     );
+  }
+
+  /**
+   * 直近28日のクエリ × ページ次元データを GSC から取得し DB に保存。
+   * 戻り値は作成された snapshot レコード。分析ジョブ専用。
+   */
+  async fetchAndStore(site: Site): Promise<GscSnapshot> {
+    const result = await this.fetchRecentRows(site);
+    const { startDate, endDate } = result;
 
     return this.dataSource.transaction(async (em) => {
       const snapshot = em.create(GscSnapshot, {
@@ -488,7 +498,10 @@ export class SearchConsoleService {
     return this.toXlsx(result);
   }
 
-  buildExportFilename(result: SearchAnalyticsResult, ext: 'xlsx' | 'csv'): string {
+  buildExportFilename(
+    result: SearchAnalyticsResult,
+    ext: 'xlsx' | 'csv',
+  ): string {
     const host = result.siteUrl
       .replace(/^sc-domain:/, '')
       .replace(/^https?:\/\//, '')

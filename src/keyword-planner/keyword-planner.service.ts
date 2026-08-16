@@ -8,15 +8,12 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import Anthropic from '@anthropic-ai/sdk';
 import { In, MoreThan, Repository } from 'typeorm';
-import {
-  GscQueryRow,
-  GscSnapshot,
-  KeywordPlan,
-  ScheduleEntry,
-  Site,
-} from '../entities';
+import { KeywordPlan, ScheduleEntry, Site } from '../entities';
 import { ArticleType } from '../blog-generator/blog-generator.dto';
-import { SearchConsoleService } from '../search-console/search-console.service';
+import {
+  SearchAnalyticsRow,
+  SearchConsoleService,
+} from '../search-console/search-console.service';
 import { SitesService } from '../sites/sites.service';
 import { SchedulerStorageService } from '../scheduler/scheduler-storage.service';
 import {
@@ -36,6 +33,19 @@ const CYCLE_DAYS = 28;
 const PLAN_LEAD_DAYS = 1;
 const TOP_QUERY_LIMIT = 50;
 
+/**
+ * Claude に渡す候補クエリ1件。
+ * スナップショットを保存しなくなったため、GSC のレスポンスから直接組み立てる。
+ */
+interface SeedRow {
+  query: string;
+  page?: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
 @Injectable()
 export class KeywordPlannerService {
   private readonly logger = new Logger(KeywordPlannerService.name);
@@ -48,8 +58,6 @@ export class KeywordPlannerService {
     private readonly schedulerStorage: SchedulerStorageService,
     @InjectRepository(KeywordPlan)
     private readonly planRepo: Repository<KeywordPlan>,
-    @InjectRepository(GscQueryRow)
-    private readonly gscRowRepo: Repository<GscQueryRow>,
     @InjectRepository(ScheduleEntry)
     private readonly scheduleRepo: Repository<ScheduleEntry>,
   ) {
@@ -207,7 +215,7 @@ export class KeywordPlannerService {
 
   /**
    * 1サイト分のキーワードプラン生成。
-   * 1) GSC スナップショットを取得（既に直近のものがあれば再利用）
+   * 1) GSC の直近28日データを取得（**保存はしない**。永続化は分析ジョブの責務）
    * 2) 候補シードを抽出して Claude にプロンプト
    * 3) keyword_plans を draft で保存
    * 4) schedule_entries を pending / source='auto' で upsert（既存 approved は保護）
@@ -215,8 +223,13 @@ export class KeywordPlannerService {
   async planForSite(
     site: Site,
   ): Promise<{ planId: number; insertedSchedules: number }> {
-    const snapshot = await this.searchConsole.fetchAndStore(site);
-    const seeds = await this.extractSeeds(snapshot);
+    // GSC は毎回取得するが保存はしない。保存すると分析ジョブが作る
+    // スナップショットと二重になるため（スナップショットは分析ジョブの責務）。
+    const gsc = await this.searchConsole.fetchRecentRows(site);
+    const seeds = this.extractSeeds(gsc.rows);
+    this.logger.log(
+      `[${site.slug}] GSC rows=${gsc.rowCount} (${gsc.startDate}..${gsc.endDate}), seeds: highImpLowCtr=${seeds.highImpLowCtr.length}, midPosition=${seeds.midPosition.length}`,
+    );
     const recentTitles = await this.recentPostTitles(site);
 
     const days = await this.callClaude(site, seeds, recentTitles);
@@ -236,7 +249,8 @@ export class KeywordPlannerService {
         cycleStart,
         cycleEnd,
         status: 'draft',
-        snapshotId: snapshot.id,
+        // スナップショットを保存しないので紐づけは無し（分析ジョブのものとは無関係）
+        snapshotId: undefined,
         generatedBy: 'claude-sonnet-4-6',
         rawResponse: { days } as unknown,
       }),
@@ -393,28 +407,39 @@ export class KeywordPlannerService {
 
   // ── 内部：候補抽出 ──
 
-  private async extractSeeds(snapshot: GscSnapshot): Promise<{
-    highImpLowCtr: GscQueryRow[];
-    midPosition: GscQueryRow[];
-  }> {
+  /**
+   * GSC の生データから候補クエリを抽出する。
+   *
+   * 以前は snapshot を保存してから SQL で絞り込んでいたが、キーワード生成では
+   * スナップショットを永続化しないため、取得したレコード上で同じ条件を適用する。
+   * 抽出条件は元の SQL と同一（impressions >= 100 かつ ctr <= 1%、position 8〜20）。
+   */
+  private extractSeeds(rows: SearchAnalyticsRow[]): {
+    highImpLowCtr: SeedRow[];
+    midPosition: SeedRow[];
+  } {
+    const seeds: SeedRow[] = rows.map((r) => ({
+      query: r.keys?.[0] ?? '',
+      page: r.keys?.[1],
+      clicks: r.clicks,
+      impressions: r.impressions,
+      ctr: r.ctr,
+      position: r.position,
+    }));
+    const byImpressionsDesc = (a: SeedRow, b: SeedRow) =>
+      b.impressions - a.impressions;
+
     // A. impressions ≥ 100 かつ ctr ≤ 1.0%
-    const highImpLowCtr = await this.gscRowRepo
-      .createQueryBuilder('r')
-      .where('r.snapshot_id = :sid', { sid: snapshot.id })
-      .andWhere('r.impressions >= 100')
-      .andWhere('r.ctr <= 0.01')
-      .orderBy('r.impressions', 'DESC')
-      .limit(TOP_QUERY_LIMIT)
-      .getMany();
+    const highImpLowCtr = seeds
+      .filter((r) => r.impressions >= 100 && r.ctr <= 0.01)
+      .sort(byImpressionsDesc)
+      .slice(0, TOP_QUERY_LIMIT);
 
     // B. position が 8〜20
-    const midPosition = await this.gscRowRepo
-      .createQueryBuilder('r')
-      .where('r.snapshot_id = :sid', { sid: snapshot.id })
-      .andWhere('r.position BETWEEN 8 AND 20')
-      .orderBy('r.impressions', 'DESC')
-      .limit(TOP_QUERY_LIMIT)
-      .getMany();
+    const midPosition = seeds
+      .filter((r) => r.position >= 8 && r.position <= 20)
+      .sort(byImpressionsDesc)
+      .slice(0, TOP_QUERY_LIMIT);
 
     return { highImpLowCtr, midPosition };
   }
@@ -441,8 +466,8 @@ export class KeywordPlannerService {
   private async callClaude(
     site: Site,
     seeds: {
-      highImpLowCtr: GscQueryRow[];
-      midPosition: GscQueryRow[];
+      highImpLowCtr: SeedRow[];
+      midPosition: SeedRow[];
     },
     recentTitles: string[],
   ): Promise<PlanDayItem[]> {
@@ -492,12 +517,12 @@ export class KeywordPlannerService {
   private buildPrompt(
     site: Site,
     seeds: {
-      highImpLowCtr: GscQueryRow[];
-      midPosition: GscQueryRow[];
+      highImpLowCtr: SeedRow[];
+      midPosition: SeedRow[];
     },
     recentTitles: string[],
   ): string {
-    const fmt = (rows: GscQueryRow[]) =>
+    const fmt = (rows: SeedRow[]) =>
       rows
         .map(
           (r) =>
