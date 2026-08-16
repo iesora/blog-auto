@@ -33,11 +33,15 @@ export interface PlanCycleResult {
   processed: number;
   succeeded: number;
   failed: number;
+  /** 有効なサイクルが残っていて生成しなかったサイト数。 */
+  skipped: number;
   results: Array<{
     siteSlug: string;
-    status: 'created' | 'failed';
+    status: 'created' | 'skipped' | 'failed';
     planId?: number;
     insertedSchedules?: number;
+    /** status='skipped' のとき、既存サイクルの終了日 (YYYY-MM-DD)。 */
+    activeUntil?: string;
     error?: string;
   }>;
 }

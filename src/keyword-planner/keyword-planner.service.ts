@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import Anthropic from '@anthropic-ai/sdk';
-import { Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Repository } from 'typeorm';
 import {
   GscQueryRow,
   GscSnapshot,
@@ -75,36 +75,88 @@ export class KeywordPlannerService {
 
   // ── plan-next-cycle ──
 
+  /**
+   * まだ有効なサイクルが残っているプランを返す（無ければ null）。
+   *
+   * 「有効」= cycleEnd が今日以降で、rejected されていないもの。
+   * rejected は作り直したいので対象外にする。draft は承認待ちなだけで
+   * サイクルは埋まっているため、再生成せず承認を待つ。
+   */
+  private async findActivePlan(
+    siteId: number,
+    today: string,
+  ): Promise<KeywordPlan | null> {
+    return this.planRepo.findOne({
+      where: {
+        siteId,
+        cycleEnd: MoreThanOrEqual(today),
+        status: In(['draft', 'approved']),
+      },
+      order: { cycleEnd: 'DESC' },
+    });
+  }
+
+  /**
+   * 日次で叩かれる想定。サイクルが切れたサイトだけ次サイクルを生成する。
+   *
+   * cron には「28日ごと」を正しく表現する書き方が無い。日フィールドに
+   * ステップ指定を書いても月替わりでリセットされてしまうため、毎日実行して
+   * 既存サイクルの有無で判定する。サイクルが途切れても翌日の実行で自動復旧する。
+   */
   async planNextCycle(): Promise<PlanCycleResult> {
     const sites = await this.sitesService.listActive();
-    this.logger.log(`planNextCycle: ${sites.length} active sites`);
+    const today = this.toDateString(new Date());
+    this.logger.log(
+      `planNextCycle: ${sites.length} active sites (today=${today})`,
+    );
 
     const settled = await Promise.allSettled(
-      sites.map((s) => this.planForSite(s)),
+      sites.map(async (s) => {
+        const active = await this.findActivePlan(s.id, today);
+        if (active) {
+          return { skipped: true as const, plan: active };
+        }
+        return { skipped: false as const, ...(await this.planForSite(s)) };
+      }),
     );
 
     const results = settled.map((s, i) => {
       const site = sites[i];
-      if (s.status === 'fulfilled') {
+      if (s.status === 'rejected') {
         return {
           siteSlug: site.slug,
-          status: 'created' as const,
-          planId: s.value.planId,
-          insertedSchedules: s.value.insertedSchedules,
+          status: 'failed' as const,
+          error: (s.reason as Error)?.message ?? String(s.reason),
+        };
+      }
+      if (s.value.skipped) {
+        return {
+          siteSlug: site.slug,
+          status: 'skipped' as const,
+          planId: s.value.plan.id,
+          activeUntil: s.value.plan.cycleEnd,
         };
       }
       return {
         siteSlug: site.slug,
-        status: 'failed' as const,
-        error: (s.reason as Error)?.message ?? String(s.reason),
+        status: 'created' as const,
+        planId: s.value.planId,
+        insertedSchedules: s.value.insertedSchedules,
       };
     });
 
     const succeeded = results.filter((r) => r.status === 'created').length;
+    const skipped = results.filter((r) => r.status === 'skipped').length;
+    const failed = results.filter((r) => r.status === 'failed').length;
+    this.logger.log(
+      `planNextCycle done: created=${succeeded}, skipped=${skipped}, failed=${failed}`,
+    );
+
     return {
       processed: results.length,
       succeeded,
-      failed: results.length - succeeded,
+      failed,
+      skipped,
       results,
     };
   }
@@ -189,7 +241,8 @@ export class KeywordPlannerService {
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.site', 'site')
       .orderBy('p.createdAt', 'DESC');
-    if (opts.siteSlug) qb.andWhere('site.slug = :slug', { slug: opts.siteSlug });
+    if (opts.siteSlug)
+      qb.andWhere('site.slug = :slug', { slug: opts.siteSlug });
     if (opts.status) qb.andWhere('p.status = :status', { status: opts.status });
     const plans = await qb.getMany();
     return plans.map((p) => ({
