@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import Anthropic from '@anthropic-ai/sdk';
-import { In, MoreThanOrEqual, Repository } from 'typeorm';
+import { In, MoreThan, Repository } from 'typeorm';
 import {
   GscQueryRow,
   GscSnapshot,
@@ -28,6 +28,8 @@ import {
 } from './keyword-planner.dto';
 
 const CYCLE_DAYS = 28;
+/** サイクル終了の何日前から次サイクルを生成するか（欠測防止 + 承認の猶予）。 */
+const PLAN_LEAD_DAYS = 3;
 const TOP_QUERY_LIMIT = 50;
 
 @Injectable()
@@ -76,20 +78,32 @@ export class KeywordPlannerService {
   // ── plan-next-cycle ──
 
   /**
-   * まだ有効なサイクルが残っているプランを返す（無ければ null）。
+   * まだ十分な残日数があるプランを返す（無ければ null = 次サイクルを作る）。
    *
-   * 「有効」= cycleEnd が今日以降で、rejected されていないもの。
-   * rejected は作り直したいので対象外にする。draft は承認待ちなだけで
-   * サイクルは埋まっているため、再生成せず承認を待つ。
+   * 「有効」= cycleEnd が (今日 + PLAN_LEAD_DAYS) より先にあり、rejected でないもの。
+   *
+   * 単純に cycleEnd >= today で判定すると、サイクルが切れた翌日に次を作ることになり
+   * その1日だけスケジュールが存在しない状態が生まれる。また承認が手動のため、
+   * 最終日に生成しても承認の猶予が実質ゼロになってしまう。
+   * そのため終了の PLAN_LEAD_DAYS 日前から次サイクルを前倒しで生成する。
+   *
+   * 前倒しで重なる数日分は upsertProtectingApproved が承認済みエントリを保護するので
+   * 二重投稿にはならない（重複分は insertedSchedules に数えられない）。
+   *
+   * rejected は作り直したいので対象外。draft は承認待ちなだけでサイクルは
+   * 埋まっているため、再生成せず承認を待つ。
    */
   private async findActivePlan(
     siteId: number,
     today: string,
   ): Promise<KeywordPlan | null> {
+    const threshold = this.toDateString(
+      this.addDays(new Date(today), PLAN_LEAD_DAYS),
+    );
     return this.planRepo.findOne({
       where: {
         siteId,
-        cycleEnd: MoreThanOrEqual(today),
+        cycleEnd: MoreThan(threshold),
         status: In(['draft', 'approved']),
       },
       order: { cycleEnd: 'DESC' },
@@ -97,17 +111,18 @@ export class KeywordPlannerService {
   }
 
   /**
-   * 日次で叩かれる想定。サイクルが切れたサイトだけ次サイクルを生成する。
+   * 日次で叩かれる想定。サイクルが切れる直前のサイトだけ次サイクルを生成する。
    *
    * cron には「28日ごと」を正しく表現する書き方が無い。日フィールドに
    * ステップ指定を書いても月替わりでリセットされてしまうため、毎日実行して
-   * 既存サイクルの有無で判定する。サイクルが途切れても翌日の実行で自動復旧する。
+   * 既存サイクルの残日数で判定する（GSC 分析の runScheduledAnalysis と同じ方式）。
+   * サイクルが途切れても翌日の実行で自動復旧する。
    */
   async planNextCycle(): Promise<PlanCycleResult> {
     const sites = await this.sitesService.listActive();
     const today = this.toDateString(new Date());
     this.logger.log(
-      `planNextCycle: ${sites.length} active sites (today=${today})`,
+      `planNextCycle: ${sites.length} active sites (today=${today}, lead=${PLAN_LEAD_DAYS}d)`,
     );
 
     const settled = await Promise.allSettled(
