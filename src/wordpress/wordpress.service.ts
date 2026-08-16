@@ -86,6 +86,44 @@ export class WordpressClient {
     return data;
   }
 
+  /**
+   * サイトに存在するカテゴリー名・タグ名を返す。
+   *
+   * 分類はエンドユーザーが WordPress 側で管理しているものを正とし、記事生成・
+   * キーワード生成のプロンプトに「この中から選べ」と渡すために使う。
+   * 取得に失敗しても生成自体は続行したいので、例外は投げず空配列を返す。
+   */
+  async listTaxonomyNames(): Promise<{
+    categories: string[];
+    tags: string[];
+  }> {
+    const pick = async (
+      load: () => Promise<{ name?: string }[]>,
+      label: string,
+    ): Promise<string[]> => {
+      try {
+        const rows = await load();
+        return rows
+          .map((r) => (r.name ?? '').trim())
+          .filter((n) => n.length > 0);
+      } catch (err) {
+        this.logger.warn(
+          `[${this.site.slug}] failed to load ${label}: ${(err as Error).message}`,
+        );
+        return [];
+      }
+    };
+
+    const [categories, tags] = await Promise.all([
+      pick(
+        () => this.listCategories() as Promise<{ name?: string }[]>,
+        'categories',
+      ),
+      pick(() => this.listTags() as Promise<{ name?: string }[]>, 'tags'),
+    ]);
+    return { categories, tags };
+  }
+
   async uploadMedia(
     imageBuffer: Buffer,
     filename: string,

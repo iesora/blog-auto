@@ -94,7 +94,13 @@ export class BlogGeneratorService {
     const wp = this.wordpressService.forSite(site);
 
     // 1. Claude で記事本文を生成（サイトのペルソナを織り込む）
-    const blog = await this.generateContent(dto, articleType, site);
+    // 分類は WordPress 側（エンドユーザー管理）を正とする。存在する名前だけを
+    // 提案させることで、resolveCategories に捨てられる無駄をなくす。
+    const taxonomy = await wp.listTaxonomyNames();
+    this.logger.log(
+      `[${site.slug}] WP taxonomy: categories=${taxonomy.categories.length}, tags=${taxonomy.tags.length}`,
+    );
+    const blog = await this.generateContent(dto, articleType, site, taxonomy);
 
     // 2. 画像生成
     const inlineImageCount = Math.min(dto.inlineImageCount ?? 2, 4);
@@ -186,6 +192,7 @@ export class BlogGeneratorService {
     dto: GenerateBlogDto,
     articleType: ArticleType,
     site: Site,
+    taxonomy: { categories: string[]; tags: string[] },
   ): Promise<GeneratedBlog> {
     const siteTemplate = site.promptTemplates?.[articleType];
     this.logger.log(
@@ -194,6 +201,8 @@ export class BlogGeneratorService {
     const prompt = buildPrompt(articleType, dto.keywords, dto.topic, {
       siteName: site.name,
       template: siteTemplate,
+      categories: taxonomy.categories,
+      tags: taxonomy.tags,
     });
 
     const message = await this.anthropic.messages.create({
@@ -361,15 +370,18 @@ export class BlogGeneratorService {
   ): Promise<number[]> {
     if (names.length === 0) return [];
     try {
-      const categories = await wp.listCategories();
-      return names
-        .map((name) => {
-          const found = categories.find(
-            (c: { name: string }) => c.name === name,
-          );
-          return found?.id;
-        })
-        .filter((id): id is number => id !== undefined);
+      const categories = (await wp.listCategories()) as {
+        id: number;
+        name: string;
+      }[];
+      const resolved = this.matchTaxonomy(names, categories);
+      const missing = names.filter((n) => !resolved.matched.includes(n));
+      if (missing.length > 0) {
+        this.logger.warn(
+          `[${wp.site.slug}] カテゴリー未登録のため無視: ${missing.join(', ')}`,
+        );
+      }
+      return resolved.ids;
     } catch (err) {
       this.logger.warn(
         `Failed to resolve categories: ${(err as Error).message}`,
@@ -384,17 +396,41 @@ export class BlogGeneratorService {
   ): Promise<number[]> {
     if (names.length === 0) return [];
     try {
-      const tags = await wp.listTags();
-      return names
-        .map((name) => {
-          const found = tags.find((t: { name: string }) => t.name === name);
-          return found?.id;
-        })
-        .filter((id): id is number => id !== undefined);
+      const tags = (await wp.listTags()) as { id: number; name: string }[];
+      const resolved = this.matchTaxonomy(names, tags);
+      const missing = names.filter((n) => !resolved.matched.includes(n));
+      if (missing.length > 0) {
+        this.logger.warn(
+          `[${wp.site.slug}] タグ未登録のため無視: ${missing.join(', ')}`,
+        );
+      }
+      return resolved.ids;
     } catch (err) {
       this.logger.warn(`Failed to resolve tags: ${(err as Error).message}`);
       return [];
     }
+  }
+
+  /**
+   * 名前で分類を引き当てる。WordPress 側に存在しないものは捨てる（新規作成はしない）。
+   * Claude が前後に空白を付けたり英字の大小が揺れても拾えるよう正規化して比較する。
+   */
+  private matchTaxonomy(
+    names: string[],
+    terms: { id: number; name: string }[],
+  ): { ids: number[]; matched: string[] } {
+    const norm = (v: string) => v.trim().toLowerCase();
+    const byName = new Map(terms.map((t) => [norm(t.name ?? ''), t.id]));
+    const ids: number[] = [];
+    const matched: string[] = [];
+    for (const name of names) {
+      const id = byName.get(norm(name));
+      if (id !== undefined && !ids.includes(id)) {
+        ids.push(id);
+        matched.push(name);
+      }
+    }
+    return { ids, matched };
   }
 
   // ── FAQ JSON-LD ──

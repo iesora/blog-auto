@@ -16,6 +16,7 @@ import {
 } from '../search-console/search-console.service';
 import { SitesService } from '../sites/sites.service';
 import { SchedulerStorageService } from '../scheduler/scheduler-storage.service';
+import { WordpressService } from '../wordpress/wordpress.service';
 import {
   PlanCycleResult,
   PlanDayItem,
@@ -56,6 +57,7 @@ export class KeywordPlannerService {
     private readonly sitesService: SitesService,
     private readonly searchConsole: SearchConsoleService,
     private readonly schedulerStorage: SchedulerStorageService,
+    private readonly wordpressService: WordpressService,
     @InjectRepository(KeywordPlan)
     private readonly planRepo: Repository<KeywordPlan>,
     @InjectRepository(ScheduleEntry)
@@ -227,12 +229,18 @@ export class KeywordPlannerService {
     // スナップショットと二重になるため（スナップショットは分析ジョブの責務）。
     const gsc = await this.searchConsole.fetchRecentRows(site);
     const seeds = this.extractSeeds(gsc.rows);
+    // 分類は WordPress 側（エンドユーザー管理）を正とし、その中から選ばせる。
+    // 存在しない名前を提案されても resolveCategories が捨てるだけなので、
+    // 最初から候補を提示して命中率を上げる。
+    const taxonomy = await this.wordpressService
+      .forSite(site)
+      .listTaxonomyNames();
     this.logger.log(
-      `[${site.slug}] GSC rows=${gsc.rowCount} (${gsc.startDate}..${gsc.endDate}), seeds: highImpLowCtr=${seeds.highImpLowCtr.length}, midPosition=${seeds.midPosition.length}`,
+      `[${site.slug}] GSC rows=${gsc.rowCount} (${gsc.startDate}..${gsc.endDate}), seeds: highImpLowCtr=${seeds.highImpLowCtr.length}, midPosition=${seeds.midPosition.length}, WP categories=${taxonomy.categories.length}, tags=${taxonomy.tags.length}`,
     );
     const recentTitles = await this.recentPostTitles(site);
 
-    const days = await this.callClaude(site, seeds, recentTitles);
+    const days = await this.callClaude(site, seeds, recentTitles, taxonomy);
     if (days.length !== CYCLE_DAYS) {
       throw new Error(
         `Claude returned ${days.length} days (expected ${CYCLE_DAYS}). plan は draft のまま、schedule は作成しない`,
@@ -470,8 +478,9 @@ export class KeywordPlannerService {
       midPosition: SeedRow[];
     },
     recentTitles: string[],
+    taxonomy: { categories: string[]; tags: string[] },
   ): Promise<PlanDayItem[]> {
-    const prompt = this.buildPrompt(site, seeds, recentTitles);
+    const prompt = this.buildPrompt(site, seeds, recentTitles, taxonomy);
 
     const message = await this.anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -521,6 +530,7 @@ export class KeywordPlannerService {
       midPosition: SeedRow[];
     },
     recentTitles: string[],
+    taxonomy: { categories: string[]; tags: string[] },
   ): string {
     const fmt = (rows: SeedRow[]) =>
       rows
@@ -547,9 +557,23 @@ export class KeywordPlannerService {
         ? recentTitles.map((t) => `- ${t}`).join('\n')
         : '(なし)',
       '',
+      '## このサイトに登録済みのカテゴリー（この中からのみ選択可）',
+      taxonomy.categories.length > 0
+        ? taxonomy.categories.map((c) => `- ${c}`).join('\n')
+        : '(登録なし。categoryNames は必ず空配列 [] にすること)',
+      '',
+      '## このサイトに登録済みのタグ（この中からのみ選択可）',
+      taxonomy.tags.length > 0
+        ? taxonomy.tags.map((t) => `- ${t}`).join('\n')
+        : '(登録なし。tagNames は必ず空配列 [] にすること)',
+      '',
       '# 制約',
       `- 1日 = 3つのキーワード（メイン + サブ × 2）`,
       '- 既存記事との重複を避け、内部リンク候補となる関連トピックを優先',
+      '- categoryNames / tagNames は上記「登録済み」一覧に載っている名前のみを、一字一句そのまま使うこと',
+      '- 一覧に無い名前を新しく考えてはいけない（WordPress 側に存在せず捨てられるため）',
+      '- 内容に合うものが無ければ空配列 [] にすること。無理に当てはめない',
+      '- categoryNames は 1〜2個、tagNames は 0〜5個を目安にする',
       `- ${CYCLE_DAYS}日分の article_type 分布の目安: SEO 60%, QA 25%, RANKING 10%, REPAIR_REPORT 5%`,
       '- offset は 0..27 の連番。重複させない',
       '- reason には「なぜこのキーワードを選んだか」を日本語で簡潔に書く（1〜2文・最大60文字程度）。',

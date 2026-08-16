@@ -10,6 +10,7 @@ import {
 import { SchedulerModule } from '../scheduler/scheduler.module';
 import { SearchConsoleModule } from '../search-console/search-console.module';
 import { SitesModule } from '../sites/sites.module';
+import { WordpressModule } from '../wordpress/wordpress.module';
 import { KeywordPlannerController } from './keyword-planner.controller';
 import { KeywordPlannerService } from './keyword-planner.service';
 
@@ -25,6 +26,7 @@ import { KeywordPlannerService } from './keyword-planner.service';
     SitesModule,
     SearchConsoleModule,
     SchedulerModule,
+    WordpressModule,
   ],
   controllers: [KeywordPlannerController],
   providers: [KeywordPlannerService],

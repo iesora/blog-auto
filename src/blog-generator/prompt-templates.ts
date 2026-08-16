@@ -125,6 +125,18 @@ const jsonFormat = (faqRule: string) => `
 ### faq のルール
 ${faqRule}
 
+### suggestedCategories / suggestedTags のルール
+このサイトに登録済みのカテゴリーは以下です。
+{{categories}}
+
+このサイトに登録済みのタグは以下です。
+{{tags}}
+
+- 上記の一覧に載っている名前のみを、一字一句そのまま使ってください
+- 一覧に無い名前を新しく考えてはいけません（WordPress 側に存在せず捨てられます）
+- 内容に合うものが無ければ空配列 [] にしてください。無理に当てはめないでください
+- suggestedCategories は 1〜2個、suggestedTags は 0〜5個を目安にしてください
+
 ### sectionImages のルール
 - content 内の <!-- IMAGE_0 --> に対応する画像を sectionImages[0] として記述
 - prompt は英語で、管楽器修理に関連する具体的なシーンを描写してください
@@ -233,6 +245,15 @@ export const PROMPT_PLACEHOLDERS = [
     description: 'トピック行。未指定なら空行になる',
   },
   { token: '{{siteName}}', description: 'サイトの表示名' },
+  {
+    token: '{{categories}}',
+    description:
+      'WordPress に登録済みのカテゴリー名一覧（この中からのみ選ばせる）',
+  },
+  {
+    token: '{{tags}}',
+    description: 'WordPress に登録済みのタグ名一覧（この中からのみ選ばせる）',
+  },
 ] as const;
 
 /** 記事タイプの既定プロンプト全文を返す（UI の初期表示・「既定値に戻す」用）。 */
@@ -244,6 +265,18 @@ export interface BuildPromptOptions {
   siteName?: string;
   /** サイト固有のプロンプト。未指定・空文字なら既定値を使う。 */
   template?: string;
+  /** WordPress に登録済みのカテゴリー名。存在しない分類を提案させないために渡す。 */
+  categories?: string[];
+  /** WordPress に登録済みのタグ名。 */
+  tags?: string[];
+}
+
+/** 分類一覧を箇条書きにする。空なら「登録なし」と明示して捏造を防ぐ。 */
+function taxonomyList(names: string[] | undefined, label: string): string {
+  if (!names || names.length === 0) {
+    return `(このサイトには${label}が登録されていません。必ず空配列 [] にしてください)`;
+  }
+  return names.map((n) => `- ${n}`).join('\n');
 }
 
 export function buildPrompt(
@@ -264,5 +297,9 @@ export function buildPrompt(
     .split('{{topic}}')
     .join(topicLine)
     .split('{{siteName}}')
-    .join(opts.siteName ?? '');
+    .join(opts.siteName ?? '')
+    .split('{{categories}}')
+    .join(taxonomyList(opts.categories, 'カテゴリー'))
+    .split('{{tags}}')
+    .join(taxonomyList(opts.tags, 'タグ'));
 }

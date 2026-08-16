@@ -345,7 +345,10 @@
             <button type="button" class="ghost" id="resetPromptBtn">この記事タイプを既定値に戻す</button>
           </div>
           <small style="color:#555;display:block;margin-top:6px;">
-            使用できる差し込み: <code>{{keywords}}</code>（必須）/ <code>{{topic}}</code> / <code>{{siteName}}</code><br>
+            使用できる差し込み: <code>{{keywords}}</code>（必須）/ <code>{{topic}}</code> / <code>{{siteName}}</code> /
+            <code>{{categories}}</code> / <code>{{tags}}</code><br>
+            <code>{{categories}}</code> <code>{{tags}}</code> は WordPress に登録済みの分類名一覧に置き換わります。
+            これを消すと、存在しない分類名が提案されて記事に付かなくなります。<br>
             既定値のまま保存すればサイト固有設定は保持されません（常に最新の既定値が使われます）。
             末尾の JSON 出力形式の指定を壊すと記事生成に失敗するのでご注意ください。
           </small>
