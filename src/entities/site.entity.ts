@@ -52,7 +52,7 @@ export class Site {
    * 未設定（キーが無い / 空文字）の記事タイプは prompt-templates.ts の既定値を使う。
    */
   @Column({ name: 'prompt_templates', type: 'json', nullable: true })
-  promptTemplates?: Partial<Record<ArticleType, string>>;
+  promptTemplates?: Partial<Record<ArticleType, string>> | null;
 
   @Column({ default: true })
   active!: boolean;

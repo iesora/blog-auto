@@ -57,11 +57,14 @@ export class SitesService {
    * - 未知の記事タイプキーは弾く
    * - 空文字/空白のみは「未設定」= 既定値を使う、として落とす
    * - {{keywords}} が無いプロンプトはキーワードが本文に反映されず事故になるので弾く
+   *
+   * 全て既定値に戻された場合は null を返す。undefined を返すと TypeORM の save() が
+   * 「変更なし」と解釈して既存の JSON が残り、既定値に戻せなくなる。
    */
   private sanitizePromptTemplates(
     input?: PromptTemplates | null,
-  ): PromptTemplates | undefined {
-    if (input === null || input === undefined) return undefined;
+  ): PromptTemplates | null {
+    if (input === null || input === undefined) return null;
     if (typeof input !== 'object' || Array.isArray(input)) {
       throw new BadRequestException('promptTemplates must be an object');
     }
@@ -92,7 +95,7 @@ export class SitesService {
       }
       out[key as ArticleType] = value;
     }
-    return Object.keys(out).length > 0 ? out : undefined;
+    return Object.keys(out).length > 0 ? out : null;
   }
 
   toResponse(site: Site): SiteResponse {
@@ -104,7 +107,7 @@ export class SitesService {
       wpUsername: site.wpUsername,
       gscSiteUrl: site.gscSiteUrl,
       defaultArticleType: site.defaultArticleType,
-      promptTemplates: site.promptTemplates,
+      promptTemplates: site.promptTemplates ?? undefined,
       active: site.active,
     };
   }
