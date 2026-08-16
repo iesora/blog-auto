@@ -199,9 +199,25 @@ ${SWELL_BLOCKS}
 ${JSON_FORMAT}`,
 };
 
+/** プロンプト内で使えるプレースホルダ。 */
+export const PROMPT_PLACEHOLDERS = [
+  { token: '{{keywords}}', description: '対象キーワード（カンマ区切り）' },
+  {
+    token: '{{topic}}',
+    description: 'トピック行。未指定なら空行になる',
+  },
+  { token: '{{siteName}}', description: 'サイトの表示名' },
+] as const;
+
+/** 記事タイプの既定プロンプト全文を返す（UI の初期表示・「既定値に戻す」用）。 */
+export function defaultPromptFor(articleType: ArticleType): string {
+  return PROMPT_TEMPLATES[articleType];
+}
+
 export interface BuildPromptOptions {
-  persona?: string;
   siteName?: string;
+  /** サイト固有のプロンプト。未指定・空文字なら既定値を使う。 */
+  template?: string;
 }
 
 export function buildPrompt(
@@ -210,19 +226,17 @@ export function buildPrompt(
   topic?: string,
   opts: BuildPromptOptions = {},
 ): string {
-  const template = PROMPT_TEMPLATES[articleType];
+  const template = opts.template?.trim()
+    ? opts.template
+    : PROMPT_TEMPLATES[articleType];
   const keywordList = keywords.join(', ');
   const topicLine = topic ? `トピック: ${topic}\n` : '';
 
-  const personaPrefix =
-    opts.persona || opts.siteName
-      ? `## 担当サイト\n- サイト名: ${opts.siteName ?? '(指定なし)'}\n- ペルソナ: ${opts.persona ?? '(指定なし)'}\n上記サイトのトーン・読者像に合わせて記事を書いてください。\n\n`
-      : '';
-
-  return (
-    personaPrefix +
-    template
-      .replace('{{keywords}}', keywordList)
-      .replace('{{topic}}', topicLine)
-  );
+  return template
+    .split('{{keywords}}')
+    .join(keywordList)
+    .split('{{topic}}')
+    .join(topicLine)
+    .split('{{siteName}}')
+    .join(opts.siteName ?? '');
 }

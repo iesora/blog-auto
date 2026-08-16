@@ -12,6 +12,15 @@ export class SitesController {
     return sites.map((s) => this.sitesService.toResponse(s));
   }
 
+  /**
+   * 記事タイプごとの既定プロンプト。管理画面の初期表示と「既定値に戻す」で使う。
+   * ':slug' より前に定義しないと "prompt-defaults" がスラッグ扱いされる。
+   */
+  @Get('prompt-defaults')
+  promptDefaults() {
+    return this.sitesService.promptDefaults();
+  }
+
   @Get(':slug')
   async get(@Param('slug') slug: string) {
     const site = await this.sitesService.findBySlug(slug);

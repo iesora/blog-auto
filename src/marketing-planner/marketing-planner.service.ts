@@ -8,7 +8,6 @@ const MODEL = 'claude-opus-4-8';
 /** プロンプトに載せるクエリ上位件数（表示回数降順） */
 const TOP_QUERIES = 80;
 
-
 export interface MarketingPlanResult {
   snapshotId: number;
   siteSlug: string;
@@ -152,7 +151,6 @@ export class MarketingPlannerService {
       '',
       '# サイト情報',
       `- サイト名: ${snapshot.site?.name ?? '(指定なし)'}`,
-      `- 想定読者 / ペルソナ: ${snapshot.site?.persona ?? '(指定なし)'}`,
       '',
       `# GSC データ（クエリ単位で集計・表示回数の多い順、上位${rows.length}件）`,
       '| クエリ | 表示回数 | クリック数 | CTR | 平均掲載順位 |',

@@ -23,7 +23,6 @@ interface SiteSeed {
   wpAppPasswordPlain: string;
   gscSiteUrl: string;
   defaultArticleType: ArticleType;
-  persona: string;
 }
 
 const seeds: SiteSeed[] = [
@@ -35,14 +34,12 @@ const seeds: SiteSeed[] = [
     wpAppPasswordPlain: process.env.WORDPRESS_APP_PASSWORD ?? '',
     gscSiteUrl: process.env.GSC_SITE_URL ?? 'https://gakkiou.com/',
     defaultArticleType: ArticleType.SEO,
-    persona: '楽器の修理・買取・レビューを扱う中立的な情報サイトの編集者',
   },
-  // 残りの 4 サイトはオーナー判断で追加（slug / name / persona を埋める）
+  // 残りの 4 サイトはオーナー判断で追加（slug / name を埋める）
   // {
   //   slug: 'site-2', name: 'サイト2',
   //   wpUrl: '', wpUsername: '', wpAppPasswordPlain: '',
   //   gscSiteUrl: '', defaultArticleType: ArticleType.SEO,
-  //   persona: '...',
   // },
 ];
 
@@ -66,7 +63,6 @@ async function main() {
       wpAppPwEncrypted: encrypted,
       gscSiteUrl: s.gscSiteUrl,
       defaultArticleType: s.defaultArticleType,
-      persona: s.persona,
       active: true,
     });
     const saved = await repo.save(site);

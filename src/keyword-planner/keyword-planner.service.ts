@@ -531,7 +531,7 @@ export class KeywordPlannerService {
         .join('\n');
 
     return [
-      `あなたは ${site.name}（ペルソナ: ${site.persona ?? '(指定なし)'}）の SEO 担当です。`,
+      `あなたは ${site.name} の SEO 担当です。`,
       `直近${CYCLE_DAYS}日の Google Search Console データを以下に示します。`,
       `これをもとに「次の${CYCLE_DAYS}日間で書くべきブログ記事」のキーワードを ${CYCLE_DAYS} 件提案してください。`,
       '',

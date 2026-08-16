@@ -336,8 +336,19 @@
         </div>
 
         <div class="field">
-          <label for="persona">ペルソナ</label>
-          <textarea id="persona" placeholder="記事生成時に参照する語り手の特徴・トーンなど"></textarea>
+          <label>記事生成プロンプト</label>
+          <div id="promptTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
+          <textarea id="promptEditor" rows="16" spellcheck="false"
+            style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre;overflow-wrap:normal;overflow-x:auto;"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+            <small id="promptStatus" style="color:#555;"></small>
+            <button type="button" class="ghost" id="resetPromptBtn">この記事タイプを既定値に戻す</button>
+          </div>
+          <small style="color:#555;display:block;margin-top:6px;">
+            使用できる差し込み: <code>{{keywords}}</code>（必須）/ <code>{{topic}}</code> / <code>{{siteName}}</code><br>
+            既定値のまま保存すればサイト固有設定は保持されません（常に最新の既定値が使われます）。
+            末尾の JSON 出力形式の指定を壊すと記事生成に失敗するのでご注意ください。
+          </small>
         </div>
 
         <div class="modal-footer">
@@ -363,10 +374,85 @@
     const form = document.getElementById('siteForm');
 
     const $ = (id) => document.getElementById(id);
-    const fields = ['slug','name','wpUrl','wpUsername','wpAppPassword','gscSiteUrl','defaultArticleType','persona','active'];
+    const fields = ['slug','name','wpUrl','wpUsername','wpAppPassword','gscSiteUrl','defaultArticleType','active'];
 
     let editingSlug = null; // null = create, string = edit
     let cachedSites = [];
+
+    // ── 記事生成プロンプト ─────────────────────────────
+    // promptDefaults: [{ value, label, template }]
+    let promptDefaults = [];
+    let promptDrafts = {};   // 記事タイプ -> 編集中の本文
+    let activePromptType = null;
+
+    async function ensurePromptDefaults() {
+      if (promptDefaults.length) return;
+      const res = await fetch('/sites/prompt-defaults');
+      if (!res.ok) throw new Error('既定プロンプトの取得に失敗しました');
+      promptDefaults = (await res.json()).articleTypes || [];
+    }
+
+    const defaultTemplateFor = (type) =>
+      (promptDefaults.find((t) => t.value === type) || {}).template || '';
+
+    function renderPromptTabs() {
+      const wrap = $('promptTabs');
+      wrap.innerHTML = '';
+      promptDefaults.forEach((t) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const customized = promptDrafts[t.value] !== defaultTemplateFor(t.value);
+        btn.textContent = customized ? `${t.label} ●` : t.label;
+        btn.title = customized ? 'このサイト専用の内容になっています' : '既定値のままです';
+        btn.className = t.value === activePromptType ? '' : 'ghost';
+        btn.style.padding = '4px 10px';
+        btn.style.fontSize = '13px';
+        btn.onclick = () => selectPromptType(t.value);
+        wrap.appendChild(btn);
+      });
+    }
+
+    function syncPromptStatus() {
+      const isDefault = $('promptEditor').value === defaultTemplateFor(activePromptType);
+      $('promptStatus').textContent = isDefault
+        ? '既定値と同じ内容です（サイト固有設定として保存されません）'
+        : 'このサイト専用の内容です（保存されます）';
+    }
+
+    function stashCurrentPrompt() {
+      if (activePromptType) promptDrafts[activePromptType] = $('promptEditor').value;
+    }
+
+    function selectPromptType(type) {
+      stashCurrentPrompt();
+      activePromptType = type;
+      $('promptEditor').value = promptDrafts[type] ?? defaultTemplateFor(type);
+      renderPromptTabs();
+      syncPromptStatus();
+    }
+
+    /** サイトの保存値を編集欄へ流し込む。未設定の記事タイプは既定値を表示する。 */
+    async function loadPromptsIntoEditor(saved) {
+      await ensurePromptDefaults();
+      promptDrafts = {};
+      promptDefaults.forEach((t) => {
+        const v = saved && saved[t.value];
+        promptDrafts[t.value] = (v && v.trim()) ? v : t.template;
+      });
+      activePromptType = null;
+      selectPromptType(promptDefaults[0] ? promptDefaults[0].value : 'seo');
+    }
+
+    /** 既定値と同じものは送らない = 既定値の更新に追従させる。 */
+    function collectPromptTemplates() {
+      stashCurrentPrompt();
+      const out = {};
+      promptDefaults.forEach((t) => {
+        const v = (promptDrafts[t.value] ?? '').trim();
+        if (v && v !== t.template.trim()) out[t.value] = v;
+      });
+      return out;
+    }
 
     function showToast(msg, ok = true) {
       toast.textContent = msg;
@@ -388,6 +474,7 @@
       form.reset();
       $('active').checked = true;
       $('defaultArticleType').value = 'seo';
+      loadPromptsIntoEditor(null);
       modalBackdrop.classList.add('show');
       setTimeout(() => $('slug').focus(), 50);
     }
@@ -408,7 +495,7 @@
       $('wpAppPassword').value = '';
       $('gscSiteUrl').value = site.gscSiteUrl;
       $('defaultArticleType').value = site.defaultArticleType || 'seo';
-      $('persona').value = site.persona || '';
+      loadPromptsIntoEditor(site.promptTemplates);
       $('active').checked = !!site.active;
       modalBackdrop.classList.add('show');
       setTimeout(() => $('name').focus(), 50);
@@ -417,6 +504,19 @@
     function closeModal() {
       modalBackdrop.classList.remove('show');
     }
+
+    $('resetPromptBtn').addEventListener('click', () => {
+      if (!activePromptType) return;
+      $('promptEditor').value = defaultTemplateFor(activePromptType);
+      promptDrafts[activePromptType] = $('promptEditor').value;
+      renderPromptTabs();
+      syncPromptStatus();
+    });
+    $('promptEditor').addEventListener('input', () => {
+      stashCurrentPrompt();
+      renderPromptTabs();
+      syncPromptStatus();
+    });
 
     openCreateBtn.addEventListener('click', openCreateModal);
     cancelBtn.addEventListener('click', closeModal);
@@ -531,7 +631,7 @@
         wpUsername: $('wpUsername').value.trim(),
         gscSiteUrl: $('gscSiteUrl').value.trim(),
         defaultArticleType: $('defaultArticleType').value,
-        persona: $('persona').value.trim() || undefined,
+        promptTemplates: collectPromptTemplates(),
         active: $('active').checked,
       };
       const pw = $('wpAppPassword').value;

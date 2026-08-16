@@ -47,8 +47,12 @@ export class Site {
   @Column({ name: 'default_tags', type: 'json', nullable: true })
   defaultTags?: string[];
 
-  @Column({ type: 'text', nullable: true })
-  persona?: string;
+  /**
+   * 記事タイプごとの生成プロンプト。キーは ArticleType。
+   * 未設定（キーが無い / 空文字）の記事タイプは prompt-templates.ts の既定値を使う。
+   */
+  @Column({ name: 'prompt_templates', type: 'json', nullable: true })
+  promptTemplates?: Partial<Record<ArticleType, string>>;
 
   @Column({ default: true })
   active!: boolean;

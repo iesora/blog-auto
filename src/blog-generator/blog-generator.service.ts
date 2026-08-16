@@ -187,9 +187,13 @@ export class BlogGeneratorService {
     articleType: ArticleType,
     site: Site,
   ): Promise<GeneratedBlog> {
+    const siteTemplate = site.promptTemplates?.[articleType];
+    this.logger.log(
+      `[${site.slug}] prompt for ${articleType}: ${siteTemplate?.trim() ? 'サイト固有' : '既定値'}`,
+    );
     const prompt = buildPrompt(articleType, dto.keywords, dto.topic, {
-      persona: site.persona,
       siteName: site.name,
+      template: siteTemplate,
     });
 
     const message = await this.anthropic.messages.create({

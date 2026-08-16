@@ -25,7 +25,9 @@ export class MarketingPlannerController {
   async getSavedPlan(@Param('id', ParseIntPipe) id: number) {
     const plan = await this.service.getSavedPlan(id);
     if (!plan) {
-      throw new NotFoundException(`marketing plan for snapshot ${id} not found`);
+      throw new NotFoundException(
+        `marketing plan for snapshot ${id} not found`,
+      );
     }
     return plan;
   }

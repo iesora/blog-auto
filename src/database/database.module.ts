@@ -11,6 +11,7 @@ import {
 } from '../entities';
 import { InitV2Schema1715817600000 } from '../migrations/1715817600000-InitV2Schema';
 import { AddMarketingStrategyToSnapshots1781600000000 } from '../migrations/1781600000000-AddMarketingStrategyToSnapshots';
+import { ReplacePersonaWithPromptTemplates1786900000000 } from '../migrations/1786900000000-ReplacePersonaWithPromptTemplates';
 
 const ENTITIES = [
   Site,
@@ -24,6 +25,7 @@ const ENTITIES = [
 const MIGRATIONS = [
   InitV2Schema1715817600000,
   AddMarketingStrategyToSnapshots1781600000000,
+  ReplacePersonaWithPromptTemplates1786900000000,
 ];
 
 @Module({

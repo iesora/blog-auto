@@ -1,9 +1,6 @@
 export { Site } from './site.entity';
 export { ScheduleEntry } from './schedule-entry.entity';
-export type {
-  ScheduleStatus,
-  ScheduleSource,
-} from './schedule-entry.entity';
+export type { ScheduleStatus, ScheduleSource } from './schedule-entry.entity';
 export { RunHistory } from './run-history.entity';
 export type { RunStatus } from './run-history.entity';
 export { KeywordPlan } from './keyword-plan.entity';
