@@ -320,7 +320,7 @@
           <input type="url" id="gscSiteUrl" placeholder="https://example.com/" required>
         </div>
 
-        <div class="field-row" style="grid-template-columns:1fr 1fr auto;">
+        <div class="field-row">
           <div class="field">
             <label for="defaultArticleType">デフォルト記事タイプ</label>
             <select id="defaultArticleType" class="select" style="width:100%">
@@ -330,13 +330,6 @@
               <option value="ranking">ranking (ランキング)</option>
             </select>
           </div>
-          <div class="field">
-            <label for="postStatus">投稿ステータス</label>
-            <select id="postStatus" class="select" style="width:100%">
-              <option value="draft">draft (下書き)</option>
-              <option value="publish">publish (公開)</option>
-            </select>
-          </div>
           <div class="field field-checkbox" style="display:flex;align-items:end;padding-bottom:12px;">
             <label>
               <input type="checkbox" id="active" checked>
@@ -344,9 +337,17 @@
             </label>
           </div>
         </div>
-        <p class="field-hint" style="margin:-4px 0 0;">
-          publish にすると、生成された記事が確認なしでそのまま公開されます。
-        </p>
+
+        <div class="field">
+          <label>
+            <input type="checkbox" id="postStatusPublish">
+            生成記事をそのまま公開する
+          </label>
+          <p class="field-hint" id="postStatusHint">
+            OFF なら下書き (draft) で投稿し、WordPress 側で確認してから公開できます。
+            ON にすると確認なしでそのまま公開 (publish) されます。
+          </p>
+        </div>
 
         <div class="field">
           <label>
@@ -401,7 +402,7 @@
     const form = document.getElementById('siteForm');
 
     const $ = (id) => document.getElementById(id);
-    const fields = ['slug','name','wpUrl','wpUsername','wpAppPassword','gscSiteUrl','defaultArticleType','postStatus','autoApproveKeywords','active'];
+    const fields = ['slug','name','wpUrl','wpUsername','wpAppPassword','gscSiteUrl','defaultArticleType','postStatusPublish','autoApproveKeywords','active'];
 
     let editingSlug = null; // null = create, string = edit
     let cachedSites = [];
@@ -501,7 +502,7 @@
       form.reset();
       $('active').checked = true;
       $('defaultArticleType').value = 'seo';
-      $('postStatus').value = 'draft';
+      $('postStatusPublish').checked = false;
       $('autoApproveKeywords').checked = false;
       updateAutoApproveWarning();
       loadPromptsIntoEditor(null);
@@ -525,7 +526,7 @@
       $('wpAppPassword').value = '';
       $('gscSiteUrl').value = site.gscSiteUrl;
       $('defaultArticleType').value = site.defaultArticleType || 'seo';
-      $('postStatus').value = site.postStatus || 'draft';
+      $('postStatusPublish').checked = site.postStatus === 'publish';
       $('autoApproveKeywords').checked = !!site.autoApproveKeywords;
       updateAutoApproveWarning();
       loadPromptsIntoEditor(site.promptTemplates);
@@ -665,7 +666,7 @@
     function updateAutoApproveWarning() {
       const hint = $('autoApproveHint');
       if (!hint) return;
-      const risky = $('autoApproveKeywords').checked && $('postStatus').value === 'publish';
+      const risky = $('autoApproveKeywords').checked && $('postStatusPublish').checked;
       if (risky) {
         hint.innerHTML = '<strong style="color:#c62828;">警告: 投稿ステータスが publish のため、'
           + '生成された記事が誰の確認も経ずにそのまま公開されます。</strong>';
@@ -675,7 +676,7 @@
       }
     }
     $('autoApproveKeywords').addEventListener('change', updateAutoApproveWarning);
-    $('postStatus').addEventListener('change', updateAutoApproveWarning);
+    $('postStatusPublish').addEventListener('change', updateAutoApproveWarning);
 
     filterSelect.addEventListener('change', renderList);
 
@@ -689,7 +690,7 @@
         wpUsername: $('wpUsername').value.trim(),
         gscSiteUrl: $('gscSiteUrl').value.trim(),
         defaultArticleType: $('defaultArticleType').value,
-        postStatus: $('postStatus').value,
+        postStatus: $('postStatusPublish').checked ? 'publish' : 'draft',
         autoApproveKeywords: $('autoApproveKeywords').checked,
         promptTemplates: collectPromptTemplates(),
         active: $('active').checked,
