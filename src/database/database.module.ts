@@ -12,6 +12,8 @@ import {
 import { InitV2Schema1715817600000 } from '../migrations/1715817600000-InitV2Schema';
 import { AddMarketingStrategyToSnapshots1781600000000 } from '../migrations/1781600000000-AddMarketingStrategyToSnapshots';
 import { ReplacePersonaWithPromptTemplates1786900000000 } from '../migrations/1786900000000-ReplacePersonaWithPromptTemplates';
+import { AddPostStatusToSites1789200000000 } from '../migrations/1789200000000-AddPostStatusToSites';
+import { AddAutoApproveKeywords1789300000000 } from '../migrations/1789300000000-AddAutoApproveKeywords';
 
 const ENTITIES = [
   Site,
@@ -26,6 +28,8 @@ const MIGRATIONS = [
   InitV2Schema1715817600000,
   AddMarketingStrategyToSnapshots1781600000000,
   ReplacePersonaWithPromptTemplates1786900000000,
+  AddPostStatusToSites1789200000000,
+  AddAutoApproveKeywords1789300000000,
 ];
 
 @Module({

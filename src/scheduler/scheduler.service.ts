@@ -125,6 +125,11 @@ export class SchedulerService {
     if (dto.tagNames !== undefined) patch.tagNames = dto.tagNames;
     if (dto.inlineImageCount !== undefined)
       patch.inlineImageCount = dto.inlineImageCount;
+    // 人が手を入れた時点で「自動承認されただけの行」ではなくなるため、
+    // 保護対象に戻す。そうしないと次の再生成で編集内容が消える。
+    if (entry.autoApproved && Object.keys(patch).length > 0) {
+      patch.autoApproved = false;
+    }
     const updated = await this.storage.patch(id, patch);
     updated.site = entry.site;
     const lastRun = await this.storage.findLatestRun(id);

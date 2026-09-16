@@ -23,6 +23,8 @@ export interface UpsertEntryData {
   inlineImageCount?: number;
   status?: ScheduleStatus;
   source?: ScheduleSource;
+  /** status='approved' が自動承認由来か。未指定なら false（人の承認扱い）。 */
+  autoApproved?: boolean;
   planId?: number;
 }
 
@@ -107,6 +109,8 @@ export class SchedulerStorageService {
       existing.inlineImageCount = data.inlineImageCount;
       if (data.status !== undefined) existing.status = data.status;
       if (data.source !== undefined) existing.source = data.source;
+      if (data.autoApproved !== undefined)
+        existing.autoApproved = data.autoApproved;
       if (data.planId !== undefined) existing.planId = data.planId;
       return this.scheduleRepo.save(existing);
     }
@@ -124,6 +128,7 @@ export class SchedulerStorageService {
       inlineImageCount: data.inlineImageCount,
       status: data.status ?? 'pending',
       source: data.source ?? 'manual',
+      autoApproved: data.autoApproved ?? false,
       planId: data.planId,
     });
     return this.scheduleRepo.save(entry);
@@ -139,7 +144,12 @@ export class SchedulerStorageService {
     const existing = await this.scheduleRepo.findOne({
       where: { siteId: data.siteId, scheduledDate: data.scheduledDate },
     });
-    if (existing && existing.status === 'approved') return null;
+    // 人が承認・編集した行は自動生成で踏み潰さない。
+    // 自動承認で approved になっただけの行は人が中身を見ていないため、
+    // 再生成で上書きできるようにする（そうしないと作り直す手段が無くなる）。
+    if (existing && existing.status === 'approved' && !existing.autoApproved) {
+      return null;
+    }
     return this.upsert(data);
   }
 

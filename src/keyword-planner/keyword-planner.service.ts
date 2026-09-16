@@ -251,12 +251,17 @@ export class KeywordPlannerService {
     const cycleStart = this.toDateString(cycle.start);
     const cycleEnd = this.toDateString(cycle.end);
 
+    // 自動承認 ON のサイトは承認待ちを挟まず、その場で approved にする。
+    // OFF（既定）なら従来どおり draft / pending で作り、人の承認を待つ。
+    const autoApprove = site.autoApproveKeywords === true;
     const plan = await this.planRepo.save(
       this.planRepo.create({
         siteId: site.id,
         cycleStart,
         cycleEnd,
-        status: 'draft',
+        status: autoApprove ? 'approved' : 'draft',
+        approvedBy: autoApprove ? 'auto-approve' : undefined,
+        approvedAt: autoApprove ? new Date() : undefined,
         // スナップショットを保存しないので紐づけは無し（分析ジョブのものとは無関係）
         snapshotId: undefined,
         generatedBy: 'claude-sonnet-4-6',
@@ -277,7 +282,8 @@ export class KeywordPlannerService {
         articleType: day.articleType,
         categoryNames: day.categoryNames,
         tagNames: day.tagNames,
-        status: 'pending',
+        status: autoApprove ? 'approved' : 'pending',
+        autoApproved: autoApprove,
         source: 'auto',
         planId: plan.id,
       });
@@ -285,7 +291,7 @@ export class KeywordPlannerService {
     }
 
     this.logger.log(
-      `[${site.slug}] plan ${plan.id} (${cycleStart}..${cycleEnd}) created, schedule rows upserted=${inserted}`,
+      `[${site.slug}] plan ${plan.id} (${cycleStart}..${cycleEnd}) created as ${plan.status}, schedule rows upserted=${inserted}`,
     );
     return { planId: plan.id, insertedSchedules: inserted };
   }
