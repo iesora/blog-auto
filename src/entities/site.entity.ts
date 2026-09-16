@@ -53,6 +53,13 @@ export class Site {
   })
   postStatus!: PostStatus;
 
+  /**
+   * キーワード生成時にプランを自動承認するか。
+   * false（既定）なら従来どおり pending で作成し、人の承認を待つ。
+   */
+  @Column({ name: 'auto_approve_keywords', default: false })
+  autoApproveKeywords!: boolean;
+
   @Column({ name: 'default_categories', type: 'json', nullable: true })
   defaultCategories?: string[];
 

@@ -13,6 +13,8 @@ export class CreateSiteDto {
   defaultArticleType?: ArticleType;
   /** 未指定なら 'draft'。 */
   postStatus?: PostStatus;
+  /** 未指定なら false（従来どおり承認待ちで作成）。 */
+  autoApproveKeywords?: boolean;
   promptTemplates?: PromptTemplates;
   active?: boolean;
 }
@@ -25,6 +27,7 @@ export class UpdateSiteDto {
   gscSiteUrl?: string;
   defaultArticleType?: ArticleType;
   postStatus?: PostStatus;
+  autoApproveKeywords?: boolean;
   promptTemplates?: PromptTemplates;
   active?: boolean;
 }
@@ -39,6 +42,8 @@ export interface SiteResponse {
   defaultArticleType: ArticleType;
   /** 生成記事を WordPress にどの状態で投稿するか。 */
   postStatus: PostStatus;
+  /** キーワード生成時にプランを自動承認するか。 */
+  autoApproveKeywords: boolean;
   /** サイト固有のプロンプト。キーが無い記事タイプは既定値が使われる。 */
   promptTemplates?: PromptTemplates;
   active: boolean;

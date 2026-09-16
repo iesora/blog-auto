@@ -124,6 +124,7 @@ export class SitesService {
       gscSiteUrl: site.gscSiteUrl,
       defaultArticleType: site.defaultArticleType,
       postStatus: site.postStatus,
+      autoApproveKeywords: site.autoApproveKeywords,
       promptTemplates: site.promptTemplates ?? undefined,
       active: site.active,
     };
@@ -174,6 +175,7 @@ export class SitesService {
         dto.postStatus === undefined
           ? PostStatus.DRAFT
           : this.validatePostStatus(dto.postStatus),
+      autoApproveKeywords: dto.autoApproveKeywords ?? false,
       promptTemplates: this.sanitizePromptTemplates(dto.promptTemplates),
       active: dto.active ?? true,
     });
@@ -193,6 +195,8 @@ export class SitesService {
       site.defaultArticleType = dto.defaultArticleType;
     if (dto.postStatus !== undefined)
       site.postStatus = this.validatePostStatus(dto.postStatus);
+    if (dto.autoApproveKeywords !== undefined)
+      site.autoApproveKeywords = !!dto.autoApproveKeywords;
     if (dto.promptTemplates !== undefined)
       site.promptTemplates = this.sanitizePromptTemplates(dto.promptTemplates);
     if (dto.active !== undefined) site.active = dto.active;

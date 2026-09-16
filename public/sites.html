@@ -165,6 +165,7 @@
     .badge.inactive { background: #f0f0f0; color: #888; }
     .badge.publish { background: #fdecea; color: #c62828; }
     .badge.draft { background: #eef2f7; color: #55606e; }
+    .badge.auto-approve { background: #fff4e5; color: #b26a00; }
 
     .meta-row {
       display: grid;
@@ -348,6 +349,17 @@
         </p>
 
         <div class="field">
+          <label>
+            <input type="checkbox" id="autoApproveKeywords">
+            キーワード生成を自動承認する
+          </label>
+          <p class="field-hint" id="autoApproveHint">
+            ON にすると生成された28日分がそのままスケジュールに登録され、承認操作が不要になります。
+            不要な回は一覧から削除し、作り直したいときは「再生成」で上書きできます。
+          </p>
+        </div>
+
+        <div class="field">
           <label>記事生成プロンプト</label>
           <div id="promptTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
           <textarea id="promptEditor" rows="16" spellcheck="false"
@@ -389,7 +401,7 @@
     const form = document.getElementById('siteForm');
 
     const $ = (id) => document.getElementById(id);
-    const fields = ['slug','name','wpUrl','wpUsername','wpAppPassword','gscSiteUrl','defaultArticleType','postStatus','active'];
+    const fields = ['slug','name','wpUrl','wpUsername','wpAppPassword','gscSiteUrl','defaultArticleType','postStatus','autoApproveKeywords','active'];
 
     let editingSlug = null; // null = create, string = edit
     let cachedSites = [];
@@ -490,6 +502,8 @@
       $('active').checked = true;
       $('defaultArticleType').value = 'seo';
       $('postStatus').value = 'draft';
+      $('autoApproveKeywords').checked = false;
+      updateAutoApproveWarning();
       loadPromptsIntoEditor(null);
       modalBackdrop.classList.add('show');
       setTimeout(() => $('slug').focus(), 50);
@@ -512,6 +526,8 @@
       $('gscSiteUrl').value = site.gscSiteUrl;
       $('defaultArticleType').value = site.defaultArticleType || 'seo';
       $('postStatus').value = site.postStatus || 'draft';
+      $('autoApproveKeywords').checked = !!site.autoApproveKeywords;
+      updateAutoApproveWarning();
       loadPromptsIntoEditor(site.promptTemplates);
       $('active').checked = !!site.active;
       modalBackdrop.classList.add('show');
@@ -579,6 +595,9 @@
           ? '<span class="badge active">有効</span>'
           : '<span class="badge inactive">無効</span>';
         const articleType = `<span class="article-type-chip">${escapeHtml(s.defaultArticleType || 'seo')}</span>`;
+        const autoApprove = s.autoApproveKeywords
+          ? '<span class="badge auto-approve">自動承認</span>'
+          : '';
         const postStatus = (s.postStatus || 'draft') === 'publish'
           ? '<span class="badge publish">公開</span>'
           : '<span class="badge draft">下書き</span>';
@@ -591,6 +610,7 @@
                 ${activeBadge}
                 ${articleType}
                 ${postStatus}
+                ${autoApprove}
               </div>
               <dl class="meta-row">
                 <dt>WP URL</dt>      <dd><a href="${escapeHtml(s.wpUrl)}" target="_blank" rel="noreferrer">${escapeHtml(s.wpUrl)}</a></dd>
@@ -640,6 +660,23 @@
       });
     }
 
+    // 自動承認 ON かつ publish は、誰の目にも触れずに記事が公開される組み合わせ。
+    // 設定自体は許可するが、気づかず有効にしてしまわないよう画面上で警告する。
+    function updateAutoApproveWarning() {
+      const hint = $('autoApproveHint');
+      if (!hint) return;
+      const risky = $('autoApproveKeywords').checked && $('postStatus').value === 'publish';
+      if (risky) {
+        hint.innerHTML = '<strong style="color:#c62828;">警告: 投稿ステータスが publish のため、'
+          + '生成された記事が誰の確認も経ずにそのまま公開されます。</strong>';
+      } else {
+        hint.textContent = 'ON にすると生成された28日分がそのままスケジュールに登録され、承認操作が不要になります。'
+          + '不要な回は一覧から削除し、作り直したいときは「再生成」で上書きできます。';
+      }
+    }
+    $('autoApproveKeywords').addEventListener('change', updateAutoApproveWarning);
+    $('postStatus').addEventListener('change', updateAutoApproveWarning);
+
     filterSelect.addEventListener('change', renderList);
 
     form.addEventListener('submit', async (e) => {
@@ -653,6 +690,7 @@
         gscSiteUrl: $('gscSiteUrl').value.trim(),
         defaultArticleType: $('defaultArticleType').value,
         postStatus: $('postStatus').value,
+        autoApproveKeywords: $('autoApproveKeywords').checked,
         promptTemplates: collectPromptTemplates(),
         active: $('active').checked,
       };

@@ -74,6 +74,15 @@ export class ScheduleEntry {
   @Column({ type: 'enum', enum: ['manual', 'auto'], default: 'manual' })
   source!: ScheduleSource;
 
+  /**
+   * status='approved' が「自動承認」由来かどうか。
+   *
+   * 人が承認した行と区別するために持つ。自動承認された行は再生成で上書きしてよいが、
+   * 人が承認・編集した行は保護する（upsertProtectingApproved 参照）。
+   */
+  @Column({ name: 'auto_approved', default: false })
+  autoApproved!: boolean;
+
   @ManyToOne(() => KeywordPlan, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'plan_id' })
   plan?: KeywordPlan;
