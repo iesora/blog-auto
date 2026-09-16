@@ -31,6 +31,12 @@ interface GeneratedBlog {
   faq?: FaqItem[];
 }
 
+/**
+ * 記事本文の生成モデル。
+ * Sonnet 4.6 ($3/$15) から Sonnet 5 ($2/$10) へ移行。世代が新しく単価も安い。
+ */
+const ARTICLE_MODEL = 'claude-sonnet-5';
+
 const MAX_TOKENS: Record<ArticleType, number> = {
   [ArticleType.SEO]: 6400,
   [ArticleType.REPAIR_REPORT]: 7200,
@@ -206,8 +212,12 @@ export class BlogGeneratorService {
     });
 
     const message = await this.anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: ARTICLE_MODEL,
       max_tokens: MAX_TOKENS[articleType],
+      // Sonnet 5 は thinking 省略時に adaptive thinking が既定で走る。
+      // 記事生成はプロンプトで手順まで指定済みで思考の恩恵が薄く、
+      // 思考トークンが MAX_TOKENS を圧迫して本文が切れるため明示的に無効化する。
+      thinking: { type: 'disabled' },
       messages: [{ role: 'user', content: prompt }],
     });
 
