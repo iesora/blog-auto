@@ -11,7 +11,7 @@ import {
   GeneratedImage,
   ImageGeneratorService,
 } from './image-generator.service';
-import { GenerateBlogDto, ArticleType } from './blog-generator.dto';
+import { GenerateBlogDto, ArticleType, PostStatus } from './blog-generator.dto';
 import { buildPrompt } from './prompt-templates';
 
 interface FaqItem {
@@ -50,7 +50,8 @@ export interface GenerateForSiteResult {
   excerpt: string;
   metaDescription?: string;
   slug?: string;
-  status: 'draft';
+  /** 実際に WordPress へ投稿した状態。 */
+  status: PostStatus;
   articleType: ArticleType;
   featuredMediaId?: number;
   sectionImageCount: number;
@@ -92,9 +93,11 @@ export class BlogGeneratorService {
   ): Promise<GenerateForSiteResult> {
     const articleType =
       dto.articleType ?? site.defaultArticleType ?? ArticleType.SEO;
+    // 公開で投稿すると取り消しが効かないので、指定が無ければ必ず下書きに倒す。
+    const postStatus = dto.postStatus ?? site.postStatus ?? PostStatus.DRAFT;
     const keywordList = dto.keywords.join(', ');
     this.logger.log(
-      `[${site.slug}] generating [${articleType}] blog from keywords: [${keywordList}]`,
+      `[${site.slug}] generating [${articleType}] blog as [${postStatus}] from keywords: [${keywordList}]`,
     );
 
     const wp = this.wordpressService.forSite(site);
@@ -156,14 +159,14 @@ export class BlogGeneratorService {
       content,
       excerpt: metaDescription,
       slug: blog.slug,
-      status: 'draft',
+      status: postStatus,
       featured_media: uploadedImages.thumbnailId,
       categories: categoryIds.length > 0 ? categoryIds : undefined,
       tags: tagIds.length > 0 ? tagIds : undefined,
     });
 
     this.logger.log(
-      `[${site.slug}] draft created: id=${post.id}, title="${blog.title}"`,
+      `[${site.slug}] post created as [${postStatus}]: id=${post.id}, title="${blog.title}"`,
     );
 
     const imageErrors = [...imageResults.errors, ...uploadedImages.errors];
@@ -180,7 +183,7 @@ export class BlogGeneratorService {
       excerpt: blog.excerpt,
       metaDescription,
       slug: blog.slug,
-      status: 'draft',
+      status: postStatus,
       articleType,
       featuredMediaId: uploadedImages.thumbnailId,
       sectionImageCount: uploadedImages.sections.length,

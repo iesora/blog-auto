@@ -15,7 +15,7 @@ import {
   SiteResponse,
   UpdateSiteDto,
 } from './sites.dto';
-import { ArticleType } from '../blog-generator/blog-generator.dto';
+import { ArticleType, PostStatus } from '../blog-generator/blog-generator.dto';
 import {
   PROMPT_PLACEHOLDERS,
   defaultPromptFor,
@@ -98,6 +98,22 @@ export class SitesService {
     return Object.keys(out).length > 0 ? out : null;
   }
 
+  /**
+   * 投稿ステータスを検証する。
+   *
+   * このアプリは ValidationPipe を入れておらず、素の値がそのまま DB まで届く。
+   * 不正値を MySQL の enum エラーに任せると原因が分かりにくいので、ここで弾く。
+   */
+  private validatePostStatus(value: unknown): PostStatus {
+    const allowed = Object.values(PostStatus) as string[];
+    if (typeof value !== 'string' || !allowed.includes(value)) {
+      throw new BadRequestException(
+        `postStatus must be one of: ${allowed.join(', ')}`,
+      );
+    }
+    return value as PostStatus;
+  }
+
   toResponse(site: Site): SiteResponse {
     return {
       id: site.id,
@@ -107,6 +123,7 @@ export class SitesService {
       wpUsername: site.wpUsername,
       gscSiteUrl: site.gscSiteUrl,
       defaultArticleType: site.defaultArticleType,
+      postStatus: site.postStatus,
       promptTemplates: site.promptTemplates ?? undefined,
       active: site.active,
     };
@@ -153,6 +170,10 @@ export class SitesService {
       wpAppPwEncrypted: encryptSecret(dto.wpAppPassword),
       gscSiteUrl: dto.gscSiteUrl,
       defaultArticleType: dto.defaultArticleType ?? ArticleType.SEO,
+      postStatus:
+        dto.postStatus === undefined
+          ? PostStatus.DRAFT
+          : this.validatePostStatus(dto.postStatus),
       promptTemplates: this.sanitizePromptTemplates(dto.promptTemplates),
       active: dto.active ?? true,
     });
@@ -170,6 +191,8 @@ export class SitesService {
     if (dto.gscSiteUrl !== undefined) site.gscSiteUrl = dto.gscSiteUrl;
     if (dto.defaultArticleType !== undefined)
       site.defaultArticleType = dto.defaultArticleType;
+    if (dto.postStatus !== undefined)
+      site.postStatus = this.validatePostStatus(dto.postStatus);
     if (dto.promptTemplates !== undefined)
       site.promptTemplates = this.sanitizePromptTemplates(dto.promptTemplates);
     if (dto.active !== undefined) site.active = dto.active;

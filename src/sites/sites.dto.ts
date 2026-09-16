@@ -1,4 +1,4 @@
-import { ArticleType } from '../blog-generator/blog-generator.dto';
+import { ArticleType, PostStatus } from '../blog-generator/blog-generator.dto';
 
 /** 記事タイプごとの生成プロンプト。未設定の記事タイプは既定値が使われる。 */
 export type PromptTemplates = Partial<Record<ArticleType, string>>;
@@ -11,6 +11,8 @@ export class CreateSiteDto {
   wpAppPassword!: string; // 平文受信 → サーバ側で暗号化
   gscSiteUrl!: string;
   defaultArticleType?: ArticleType;
+  /** 未指定なら 'draft'。 */
+  postStatus?: PostStatus;
   promptTemplates?: PromptTemplates;
   active?: boolean;
 }
@@ -22,6 +24,7 @@ export class UpdateSiteDto {
   wpAppPassword?: string;
   gscSiteUrl?: string;
   defaultArticleType?: ArticleType;
+  postStatus?: PostStatus;
   promptTemplates?: PromptTemplates;
   active?: boolean;
 }
@@ -34,6 +37,8 @@ export interface SiteResponse {
   wpUsername: string;
   gscSiteUrl: string;
   defaultArticleType: ArticleType;
+  /** 生成記事を WordPress にどの状態で投稿するか。 */
+  postStatus: PostStatus;
   /** サイト固有のプロンプト。キーが無い記事タイプは既定値が使われる。 */
   promptTemplates?: PromptTemplates;
   active: boolean;
