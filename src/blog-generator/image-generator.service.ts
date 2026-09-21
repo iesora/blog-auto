@@ -40,9 +40,9 @@ const DEFAULT_IMAGE_MODEL = 'gemini-3.1-flash-lite-image';
 const DEFAULT_SAFETY_MODEL = 'gemini-2.5-flash';
 
 /**
- * 画像生成の提供元。IMAGE_PROVIDER で切り替える（未設定なら gemini）。
- * Gemini の画像モデルは無料枠が無く、課金が切れると全滅するため、
- * OpenAI に逃がせるようにしている。安全チェックはどちらでも Gemini を使う。
+ * 画像生成の提供元。IMAGE_PROVIDER で切り替える（未設定なら openai）。
+ * Gemini は当面使わない方針のため、openai のときは安全チェックも含めて
+ * Gemini を一切呼ばない。gemini は IMAGE_PROVIDER=gemini で明示したときだけ使う。
  */
 type ImageProvider = 'gemini' | 'openai';
 
@@ -50,6 +50,19 @@ type ImageProvider = 'gemini' | 'openai';
 const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-1-mini';
 const DEFAULT_OPENAI_IMAGE_QUALITY = 'medium';
 const OPENAI_IMAGES_URL = 'https://api.openai.com/v1/images/generations';
+/** OpenAI のモデレーション API は無料で、画像入力に対応している。 */
+const OPENAI_MODERATION_URL = 'https://api.openai.com/v1/moderations';
+const OPENAI_MODERATION_MODEL = 'omni-moderation-latest';
+
+interface SafetyResult {
+  safe: boolean;
+  reason?: string;
+  /**
+   * チェック自体が実行できなかった（API エラー・応答が読めない等）。
+   * 画像が危険だったわけではないので、作り直しても結果は変わらない。
+   */
+  checkFailed?: boolean;
+}
 
 /** 生成された画像。モデルによって PNG / JPEG が変わるため MIME を持ち回る。 */
 export interface GeneratedImage {
@@ -60,7 +73,8 @@ export interface GeneratedImage {
 @Injectable()
 export class ImageGeneratorService {
   private readonly logger = new Logger(ImageGeneratorService.name);
-  private readonly genai: GoogleGenAI;
+  /** IMAGE_PROVIDER=gemini のときだけ作る。openai では Gemini を呼ばない。 */
+  private readonly genai?: GoogleGenAI;
   private readonly provider: ImageProvider;
   private readonly imageModel: string;
   private readonly safetyModel: string;
@@ -68,12 +82,14 @@ export class ImageGeneratorService {
   private readonly openaiQuality: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.genai = new GoogleGenAI({
-      apiKey: this.configService.get<string>('GEMINI_API_KEY'),
-    });
     this.provider = this.resolveProvider(
       this.configService.get<string>('IMAGE_PROVIDER'),
     );
+    if (this.provider === 'gemini') {
+      this.genai = new GoogleGenAI({
+        apiKey: this.configService.get<string>('GEMINI_API_KEY'),
+      });
+    }
     this.imageModel =
       this.provider === 'openai'
         ? (this.configService.get<string>('OPENAI_IMAGE_MODEL') ??
@@ -85,8 +101,10 @@ export class ImageGeneratorService {
       this.configService.get<string>('OPENAI_IMAGE_QUALITY') ??
       DEFAULT_OPENAI_IMAGE_QUALITY;
     this.safetyModel =
-      this.configService.get<string>('GEMINI_SAFETY_MODEL') ??
-      DEFAULT_SAFETY_MODEL;
+      this.provider === 'openai'
+        ? OPENAI_MODERATION_MODEL
+        : (this.configService.get<string>('GEMINI_SAFETY_MODEL') ??
+          DEFAULT_SAFETY_MODEL);
     this.logger.log(
       `image provider = ${this.provider}, image model = ${this.imageModel}` +
         (this.provider === 'openai' ? ` (${this.openaiQuality})` : '') +
@@ -100,15 +118,23 @@ export class ImageGeneratorService {
     }
   }
 
-  /** 未設定・未知の値は gemini（従来動作）に倒す。typo で気づけるよう警告を出す。 */
+  /** 未設定・未知の値は openai に倒す。typo で気づけるよう警告を出す。 */
   private resolveProvider(raw: string | undefined): ImageProvider {
     const value = (raw ?? '').trim().toLowerCase();
-    if (value === '' || value === 'gemini') return 'gemini';
-    if (value === 'openai') return 'openai';
+    if (value === '' || value === 'openai') return 'openai';
+    if (value === 'gemini') return 'gemini';
     this.logger.warn(
-      `IMAGE_PROVIDER="${raw}" は不明な値のため gemini を使います（gemini / openai のみ有効）`,
+      `IMAGE_PROVIDER="${raw}" は不明な値のため openai を使います（openai / gemini のみ有効）`,
     );
-    return 'gemini';
+    return 'openai';
+  }
+
+  /** Gemini クライアント。IMAGE_PROVIDER=gemini 以外で呼ばれたら設定ミスなので例外にする。 */
+  private get gemini(): GoogleGenAI {
+    if (!this.genai) {
+      throw new Error('Gemini is disabled (IMAGE_PROVIDER is not gemini)');
+    }
+    return this.genai;
   }
 
   async generateThumbnail(
@@ -144,6 +170,14 @@ export class ImageGeneratorService {
         return image;
       }
 
+      if (safetyResult.checkFailed) {
+        // チェックする側が動いていないだけで、作り直しても同じ結果になる。
+        // 画像代を無駄にしないよう再生成はせず、未確認の画像も採用しない。
+        throw new Error(
+          `Image safety check unavailable: ${safetyResult.reason}`,
+        );
+      }
+
       this.logger.warn(
         `Image failed safety check (attempt ${attempt}/${MAX_GENERATION_ATTEMPTS}): ${safetyResult.reason}`,
       );
@@ -158,13 +192,85 @@ export class ImageGeneratorService {
     throw new Error('Unexpected: exited retry loop without result');
   }
 
-  private async checkImageSafety(
+  private async checkImageSafety(image: GeneratedImage): Promise<SafetyResult> {
+    return this.provider === 'openai'
+      ? this.checkWithOpenAIModeration(image)
+      : this.checkWithGemini(image);
+  }
+
+  private async checkWithOpenAIModeration(
     image: GeneratedImage,
-  ): Promise<{ safe: boolean; reason?: string }> {
+  ): Promise<SafetyResult> {
+    if (!this.openaiApiKey) {
+      return {
+        safe: false,
+        checkFailed: true,
+        reason: 'OPENAI_API_KEY is not configured',
+      };
+    }
+    try {
+      const res = await axios.post(
+        OPENAI_MODERATION_URL,
+        {
+          model: OPENAI_MODERATION_MODEL,
+          input: [
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${image.mimeType};base64,${image.buffer.toString('base64')}`,
+              },
+            },
+          ],
+        },
+        {
+          headers: { Authorization: `Bearer ${this.openaiApiKey}` },
+          timeout: 60_000,
+        },
+      );
+      const result = (
+        res.data as {
+          results?: {
+            flagged?: boolean;
+            categories?: Record<string, boolean>;
+          }[];
+        }
+      ).results?.[0];
+      if (!result) {
+        return {
+          safe: false,
+          checkFailed: true,
+          reason: 'Moderation response was empty',
+        };
+      }
+      if (!result.flagged) return { safe: true };
+      const hits = Object.entries(result.categories ?? {})
+        .filter(([, v]) => v)
+        .map(([k]) => k);
+      return {
+        safe: false,
+        reason: `flagged: ${hits.join(', ') || 'unknown'}`,
+      };
+    } catch (err) {
+      const reason = axios.isAxiosError(err)
+        ? `HTTP ${err.response?.status ?? '-'} ${
+            (err.response?.data as { error?: { message?: string } })?.error
+              ?.message ?? err.message
+          }`
+        : (err as Error).message;
+      this.logger.warn(`Safety check failed: ${reason}`);
+      return {
+        safe: false,
+        checkFailed: true,
+        reason: `Safety check error: ${reason.slice(0, 300)}`,
+      };
+    }
+  }
+
+  private async checkWithGemini(image: GeneratedImage): Promise<SafetyResult> {
     try {
       const base64Image = image.buffer.toString('base64');
 
-      const response = await this.genai.models.generateContent({
+      const response = await this.gemini.models.generateContent({
         model: this.safetyModel,
         contents: [
           {
@@ -187,7 +293,11 @@ export class ImageGeneratorService {
 
       if (!jsonMatch) {
         this.logger.warn(`Safety check returned unparseable response: ${text}`);
-        return { safe: false, reason: 'Safety check response was unparseable' };
+        return {
+          safe: false,
+          checkFailed: true,
+          reason: 'Safety check response was unparseable',
+        };
       }
 
       const result = JSON.parse(jsonMatch[0]);
@@ -197,7 +307,11 @@ export class ImageGeneratorService {
       };
     } catch (err) {
       this.logger.warn(`Safety check failed: ${err.message}`);
-      return { safe: false, reason: `Safety check error: ${err.message}` };
+      return {
+        safe: false,
+        checkFailed: true,
+        reason: `Safety check error: ${err.message}`,
+      };
     }
   }
 
@@ -254,7 +368,7 @@ export class ImageGeneratorService {
   }
 
   private async generateWithGemini(prompt: string): Promise<GeneratedImage> {
-    const response = await this.genai.models.generateContent({
+    const response = await this.gemini.models.generateContent({
       model: this.imageModel,
       contents: prompt,
     });
