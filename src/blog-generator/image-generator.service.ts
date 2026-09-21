@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
+import axios from 'axios';
 import { ArticleType } from './blog-generator.dto';
 
 const STYLE_SUFFIX =
@@ -38,6 +39,18 @@ const MAX_GENERATION_ATTEMPTS = 3;
 const DEFAULT_IMAGE_MODEL = 'gemini-3.1-flash-lite-image';
 const DEFAULT_SAFETY_MODEL = 'gemini-2.5-flash';
 
+/**
+ * 画像生成の提供元。IMAGE_PROVIDER で切り替える（未設定なら gemini）。
+ * Gemini の画像モデルは無料枠が無く、課金が切れると全滅するため、
+ * OpenAI に逃がせるようにしている。安全チェックはどちらでも Gemini を使う。
+ */
+type ImageProvider = 'gemini' | 'openai';
+
+/** gpt-image-1-mini の medium は約 $0.009/枚で、Gemini lite の約1/4。 */
+const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-1-mini';
+const DEFAULT_OPENAI_IMAGE_QUALITY = 'medium';
+const OPENAI_IMAGES_URL = 'https://api.openai.com/v1/images/generations';
+
 /** 生成された画像。モデルによって PNG / JPEG が変わるため MIME を持ち回る。 */
 export interface GeneratedImage {
   buffer: Buffer;
@@ -48,22 +61,54 @@ export interface GeneratedImage {
 export class ImageGeneratorService {
   private readonly logger = new Logger(ImageGeneratorService.name);
   private readonly genai: GoogleGenAI;
+  private readonly provider: ImageProvider;
   private readonly imageModel: string;
   private readonly safetyModel: string;
+  private readonly openaiApiKey?: string;
+  private readonly openaiQuality: string;
 
   constructor(private readonly configService: ConfigService) {
     this.genai = new GoogleGenAI({
       apiKey: this.configService.get<string>('GEMINI_API_KEY'),
     });
+    this.provider = this.resolveProvider(
+      this.configService.get<string>('IMAGE_PROVIDER'),
+    );
     this.imageModel =
-      this.configService.get<string>('GEMINI_IMAGE_MODEL') ??
-      DEFAULT_IMAGE_MODEL;
+      this.provider === 'openai'
+        ? (this.configService.get<string>('OPENAI_IMAGE_MODEL') ??
+          DEFAULT_OPENAI_IMAGE_MODEL)
+        : (this.configService.get<string>('GEMINI_IMAGE_MODEL') ??
+          DEFAULT_IMAGE_MODEL);
+    this.openaiApiKey = this.configService.get<string>('OPENAI_API_KEY');
+    this.openaiQuality =
+      this.configService.get<string>('OPENAI_IMAGE_QUALITY') ??
+      DEFAULT_OPENAI_IMAGE_QUALITY;
     this.safetyModel =
       this.configService.get<string>('GEMINI_SAFETY_MODEL') ??
       DEFAULT_SAFETY_MODEL;
     this.logger.log(
-      `image model = ${this.imageModel}, safety model = ${this.safetyModel}`,
+      `image provider = ${this.provider}, image model = ${this.imageModel}` +
+        (this.provider === 'openai' ? ` (${this.openaiQuality})` : '') +
+        `, safety model = ${this.safetyModel}`,
     );
+    if (this.provider === 'openai' && !this.openaiApiKey) {
+      // 起動は止めない。記事生成は続け、画像だけ失敗として imageErrors に残す
+      this.logger.error(
+        'IMAGE_PROVIDER=openai ですが OPENAI_API_KEY が未設定です。画像生成は失敗します',
+      );
+    }
+  }
+
+  /** 未設定・未知の値は gemini（従来動作）に倒す。typo で気づけるよう警告を出す。 */
+  private resolveProvider(raw: string | undefined): ImageProvider {
+    const value = (raw ?? '').trim().toLowerCase();
+    if (value === '' || value === 'gemini') return 'gemini';
+    if (value === 'openai') return 'openai';
+    this.logger.warn(
+      `IMAGE_PROVIDER="${raw}" は不明な値のため gemini を使います（gemini / openai のみ有効）`,
+    );
+    return 'gemini';
   }
 
   async generateThumbnail(
@@ -157,6 +202,58 @@ export class ImageGeneratorService {
   }
 
   private async generateImage(prompt: string): Promise<GeneratedImage> {
+    return this.provider === 'openai'
+      ? this.generateWithOpenAI(prompt)
+      : this.generateWithGemini(prompt);
+  }
+
+  private async generateWithOpenAI(prompt: string): Promise<GeneratedImage> {
+    if (!this.openaiApiKey) {
+      throw new Error('OPENAI_API_KEY is not configured');
+    }
+    let data: { data?: { b64_json?: string }[] };
+    try {
+      const res = await axios.post(
+        OPENAI_IMAGES_URL,
+        {
+          model: this.imageModel,
+          prompt,
+          size: '1024x1024',
+          quality: this.openaiQuality,
+          // PNG だと 1枚 1.5MB 前後になりページが重くなるため JPEG で受ける
+          output_format: 'jpeg',
+          n: 1,
+        },
+        {
+          headers: { Authorization: `Bearer ${this.openaiApiKey}` },
+          timeout: 120_000,
+        },
+      );
+      data = res.data as typeof data;
+    } catch (err) {
+      const reason = axios.isAxiosError(err)
+        ? `HTTP ${err.response?.status ?? '-'} ${
+            (err.response?.data as { error?: { message?: string } })?.error
+              ?.message ?? err.message
+          }`
+        : (err as Error).message;
+      throw new Error(
+        `Failed to generate image (${this.imageModel}): ${reason.slice(0, 300)}`,
+      );
+    }
+
+    const b64 = data.data?.[0]?.b64_json;
+    if (!b64) {
+      throw new Error(
+        `Failed to generate image (${this.imageModel}): empty response`,
+      );
+    }
+    const buffer = Buffer.from(b64, 'base64');
+    this.logger.log(`Image generated: ${buffer.length} bytes (image/jpeg)`);
+    return { buffer, mimeType: 'image/jpeg' };
+  }
+
+  private async generateWithGemini(prompt: string): Promise<GeneratedImage> {
     const response = await this.genai.models.generateContent({
       model: this.imageModel,
       contents: prompt,
